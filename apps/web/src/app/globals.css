@@ -1,0 +1,72 @@
+@import "tailwindcss" source("../..");
+
+@theme inline {
+  --color-primary-50: oklch(0.97 0.01 250);
+  --color-primary-100: oklch(0.93 0.03 250);
+  --color-primary-200: oklch(0.87 0.06 250);
+  --color-primary-300: oklch(0.78 0.10 250);
+  --color-primary-400: oklch(0.68 0.15 250);
+  --color-primary-500: oklch(0.59 0.20 250);
+  --color-primary-600: oklch(0.52 0.22 250);
+  --color-primary-700: oklch(0.45 0.20 250);
+  --color-primary-800: oklch(0.38 0.16 250);
+  --color-primary-900: oklch(0.33 0.12 250);
+  --color-primary-950: oklch(0.25 0.09 250);
+
+  --color-neutral-50: oklch(0.985 0 0);
+  --color-neutral-100: oklch(0.965 0 0);
+  --color-neutral-200: oklch(0.925 0 0);
+  --color-neutral-300: oklch(0.87 0 0);
+  --color-neutral-400: oklch(0.71 0 0);
+  --color-neutral-500: oklch(0.55 0 0);
+  --color-neutral-600: oklch(0.44 0 0);
+  --color-neutral-700: oklch(0.37 0 0);
+  --color-neutral-800: oklch(0.27 0 0);
+  --color-neutral-900: oklch(0.21 0 0);
+  --color-neutral-950: oklch(0.13 0 0);
+
+  --color-success: oklch(0.60 0.18 145);
+  --color-warning: oklch(0.75 0.18 75);
+  --color-danger: oklch(0.58 0.22 25);
+
+  --color-background: var(--color-neutral-50);
+  --color-foreground: var(--color-neutral-950);
+  --color-card: oklch(1 0 0);
+  --color-card-foreground: var(--color-neutral-950);
+  --color-border: var(--color-neutral-200);
+  --color-input: var(--color-neutral-200);
+  --color-muted: var(--color-neutral-100);
+  --color-muted-foreground: var(--color-neutral-500);
+
+  --radius-sm: 0.375rem;
+  --radius-md: 0.5rem;
+  --radius-lg: 0.75rem;
+  --radius-xl: 1rem;
+
+  --font-sans: "Inter", ui-sans-serif, system-ui, sans-serif;
+}
+
+@layer base {
+  * {
+    border-color: var(--color-border);
+  }
+
+  body {
+    background-color: var(--color-background);
+    color: var(--color-foreground);
+    font-family: var(--font-sans);
+  }
+}
+
+@media (prefers-color-scheme: dark) {
+  @theme inline {
+    --color-background: var(--color-neutral-950);
+    --color-foreground: var(--color-neutral-50);
+    --color-card: var(--color-neutral-900);
+    --color-card-foreground: var(--color-neutral-50);
+    --color-border: var(--color-neutral-800);
+    --color-input: var(--color-neutral-800);
+    --color-muted: var(--color-neutral-800);
+    --color-muted-foreground: var(--color-neutral-400);
+  }
+}

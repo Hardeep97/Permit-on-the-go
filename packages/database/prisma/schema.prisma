@@ -1,0 +1,759 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider  = "postgresql"
+  url       = env("DATABASE_URL")
+  directUrl = env("DIRECT_URL")
+}
+
+// ============================================
+// CORE USER & ORGANIZATION
+// ============================================
+
+model User {
+  id                 String    @id @default(cuid())
+  email              String    @unique
+  password           String?
+  name               String
+  phone              String?
+  avatarUrl          String?
+  stripeCustomerId   String?
+  emailVerified      Boolean   @default(false)
+  onboardingComplete Boolean   @default(false)
+  createdAt          DateTime  @default(now())
+  updatedAt          DateTime  @updatedAt
+
+  memberships       OrganizationMember[]
+  ownedProperties   Property[]
+  permits           Permit[]           @relation("PermitCreator")
+  documents         Document[]         @relation("DocumentUploader")
+  parties           PermitParty[]
+  tasks             Task[]             @relation("TaskAssignee")
+  tasksCreated      Task[]             @relation("TaskCreator")
+  activityLogs      ActivityLog[]
+  chatConversations ChatConversation[]
+  subscription      Subscription?
+  vendorProfile     VendorProfile?
+  pushTokens        PushToken[]
+  notifications     Notification[]
+  photos            PermitPhoto[]      @relation("PhotoUploader")
+
+  @@map("users")
+}
+
+model Organization {
+  id        String   @id @default(cuid())
+  name      String
+  slug      String   @unique
+  logoUrl   String?
+  plan      String   @default("FREE")
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  members    OrganizationMember[]
+  properties Property[]
+  permits    Permit[]
+
+  @@map("organizations")
+}
+
+model OrganizationMember {
+  id           String   @id @default(cuid())
+  role         String   @default("MEMBER")
+  inviteStatus String   @default("ACCEPTED")
+  inviteEmail  String?
+  joinedAt     DateTime @default(now())
+
+  userId         String?
+  user           User?        @relation(fields: [userId], references: [id])
+  organizationId String
+  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, organizationId])
+  @@map("organization_members")
+}
+
+// ============================================
+// PROPERTY MANAGEMENT
+// ============================================
+
+model Property {
+  id              String   @id @default(cuid())
+  name            String
+  address         String
+  city            String
+  county          String?
+  state           String
+  zipCode         String
+  propertyType    String   @default("RESIDENTIAL")
+  blockLot        String?
+  yearBuilt       Int?
+  squareFeet      Int?
+  units           Int      @default(1)
+  zoneDesignation String?
+  status          String   @default("ACTIVE")
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  ownerId        String
+  owner          User          @relation(fields: [ownerId], references: [id])
+  organizationId String?
+  organization   Organization? @relation(fields: [organizationId], references: [id])
+  jurisdictionId String?
+  jurisdiction   Jurisdiction? @relation(fields: [jurisdictionId], references: [id])
+  permits        Permit[]
+  documents      Document[]
+
+  @@index([ownerId])
+  @@index([organizationId])
+  @@index([state, city])
+  @@map("properties")
+}
+
+// ============================================
+// PERMIT TRACKING
+// ============================================
+
+model Permit {
+  id             String    @id @default(cuid())
+  permitNumber   String?
+  internalRef    String    @unique @default(cuid())
+  title          String
+  description    String?
+  projectType    String
+  subcodeType    String
+  status         String    @default("DRAFT")
+  priority       String    @default("NORMAL")
+  estimatedValue Float?
+  permitFee      Float?
+  submittedAt    DateTime?
+  approvedAt     DateTime?
+  expiresAt      DateTime?
+  issuedAt       DateTime?
+  closedAt       DateTime?
+  notes          String?
+  createdAt      DateTime  @default(now())
+  updatedAt      DateTime  @updatedAt
+
+  creatorId      String
+  creator        User          @relation("PermitCreator", fields: [creatorId], references: [id])
+  propertyId     String
+  property       Property      @relation(fields: [propertyId], references: [id])
+  organizationId String?
+  organization   Organization? @relation(fields: [organizationId], references: [id])
+  jurisdictionId String?
+  jurisdiction   Jurisdiction? @relation(fields: [jurisdictionId], references: [id])
+
+  milestones      PermitMilestone[]
+  parties         PermitParty[]
+  documents       Document[]
+  tasks           Task[]
+  formSubmissions FormSubmission[]
+  activityLogs    ActivityLog[]
+  inspections     Inspection[]
+  messages        Message[]
+  photos          PermitPhoto[]
+
+  @@index([creatorId])
+  @@index([propertyId])
+  @@index([status])
+  @@index([subcodeType])
+  @@map("permits")
+}
+
+model PermitMilestone {
+  id           String    @id @default(cuid())
+  title        String
+  description  String?
+  dueDate      DateTime?
+  completedAt  DateTime?
+  status       String    @default("PENDING")
+  sortOrder    Int       @default(0)
+  isAutomatic  Boolean   @default(false)
+  reminderSent Boolean   @default(false)
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
+
+  permitId String
+  permit   Permit @relation(fields: [permitId], references: [id], onDelete: Cascade)
+
+  @@index([permitId])
+  @@index([dueDate])
+  @@map("permit_milestones")
+}
+
+model Inspection {
+  id             String    @id @default(cuid())
+  type           String
+  scheduledDate  DateTime?
+  completedDate  DateTime?
+  status         String    @default("NOT_SCHEDULED")
+  inspectorName  String?
+  inspectorPhone String?
+  result         String?
+  notes          String?
+  createdAt      DateTime  @default(now())
+  updatedAt      DateTime  @updatedAt
+
+  permitId String
+  permit   Permit @relation(fields: [permitId], references: [id], onDelete: Cascade)
+
+  @@index([permitId])
+  @@map("inspections")
+}
+
+// ============================================
+// PHOTOS & VISUAL TRACKING
+// ============================================
+
+model PermitPhoto {
+  id        String   @id @default(cuid())
+  fileUrl   String
+  fileName  String
+  caption   String?
+  stage     String?  // BEFORE, DURING, AFTER, INSPECTION
+  fileSize  Int?
+  mimeType  String?
+  createdAt DateTime @default(now())
+
+  uploadedById String
+  uploadedBy   User   @relation("PhotoUploader", fields: [uploadedById], references: [id])
+  permitId     String
+  permit       Permit @relation(fields: [permitId], references: [id], onDelete: Cascade)
+
+  photoShares PermitPhotoShare[]
+
+  @@index([permitId])
+  @@map("permit_photos")
+}
+
+model PermitPhotoShare {
+  id          String   @id @default(cuid())
+  recipientEmail String
+  recipientName  String?
+  message     String?
+  sentAt      DateTime @default(now())
+
+  photoId String
+  photo   PermitPhoto @relation(fields: [photoId], references: [id], onDelete: Cascade)
+
+  @@map("permit_photo_shares")
+}
+
+// ============================================
+// MULTI-PARTY COLLABORATION
+// ============================================
+
+model PermitParty {
+  id        String   @id @default(cuid())
+  role      String
+  isPrimary Boolean  @default(false)
+  addedAt   DateTime @default(now())
+
+  permitId  String
+  permit    Permit   @relation(fields: [permitId], references: [id], onDelete: Cascade)
+  userId    String?
+  user      User?    @relation(fields: [userId], references: [id])
+  contactId String?
+  contact   Contact? @relation(fields: [contactId], references: [id])
+
+  @@unique([permitId, userId])
+  @@map("permit_parties")
+}
+
+model Contact {
+  id            String   @id @default(cuid())
+  name          String
+  email         String?
+  phone         String?
+  company       String?
+  title         String?
+  licenseNumber String?
+  contactType   String
+  notes         String?
+  createdById   String?
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  permitParties PermitParty[]
+
+  @@map("contacts")
+}
+
+// ============================================
+// DOCUMENT MANAGEMENT
+// ============================================
+
+model Document {
+  id          String   @id @default(cuid())
+  title       String
+  description String?
+  fileUrl     String
+  fileName    String
+  fileSize    Int?
+  mimeType    String?
+  category    String   @default("OTHER")
+  version     Int      @default(1)
+  isArchived  Boolean  @default(false)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  uploadedById String
+  uploadedBy   User      @relation("DocumentUploader", fields: [uploadedById], references: [id])
+  permitId     String?
+  permit       Permit?   @relation(fields: [permitId], references: [id])
+  propertyId   String?
+  property     Property? @relation(fields: [propertyId], references: [id])
+
+  @@index([permitId])
+  @@index([propertyId])
+  @@map("documents")
+}
+
+// ============================================
+// SUBCODE FORM ENGINE
+// ============================================
+
+model FormTemplate {
+  id             String   @id @default(cuid())
+  name           String
+  description    String?
+  subcodeType    String
+  version        String   @default("1.0")
+  jurisdictionId String?
+  schema         Json
+  uiSchema       Json?
+  defaultValues  Json?
+  pdfTemplate    String?
+  isActive       Boolean  @default(true)
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  jurisdiction Jurisdiction?  @relation(fields: [jurisdictionId], references: [id])
+  submissions  FormSubmission[]
+
+  @@index([subcodeType])
+  @@index([jurisdictionId])
+  @@map("form_templates")
+}
+
+model FormSubmission {
+  id        String   @id @default(cuid())
+  data      Json
+  status    String   @default("DRAFT")
+  pdfUrl    String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  templateId String
+  template   FormTemplate @relation(fields: [templateId], references: [id])
+  permitId   String
+  permit     Permit       @relation(fields: [permitId], references: [id], onDelete: Cascade)
+
+  @@index([permitId])
+  @@map("form_submissions")
+}
+
+// ============================================
+// TASK & WORKFLOW MANAGEMENT
+// ============================================
+
+model Task {
+  id          String    @id @default(cuid())
+  title       String
+  description String?
+  status      String    @default("TODO")
+  priority    String    @default("NORMAL")
+  dueDate     DateTime?
+  completedAt DateTime?
+  sortOrder   Int       @default(0)
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+
+  permitId   String?
+  permit     Permit? @relation(fields: [permitId], references: [id], onDelete: Cascade)
+  assigneeId String?
+  assignee   User?   @relation("TaskAssignee", fields: [assigneeId], references: [id])
+  creatorId  String
+  creator    User    @relation("TaskCreator", fields: [creatorId], references: [id])
+
+  checklistItems TaskChecklistItem[]
+
+  @@index([permitId])
+  @@index([assigneeId])
+  @@map("tasks")
+}
+
+model TaskChecklistItem {
+  id          String   @id @default(cuid())
+  title       String
+  isCompleted Boolean  @default(false)
+  sortOrder   Int      @default(0)
+  createdAt   DateTime @default(now())
+
+  taskId String
+  task   Task @relation(fields: [taskId], references: [id], onDelete: Cascade)
+
+  @@map("task_checklist_items")
+}
+
+model WorkflowTemplate {
+  id          String   @id @default(cuid())
+  name        String
+  description String?
+  permitType  String
+  steps       Json
+  isDefault   Boolean  @default(false)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@map("workflow_templates")
+}
+
+// ============================================
+// MESSAGING & ACTIVITY
+// ============================================
+
+model Message {
+  id          String   @id @default(cuid())
+  content     String
+  senderName  String
+  senderEmail String?
+  senderType  String   @default("USER")
+  isRead      Boolean  @default(false)
+  createdAt   DateTime @default(now())
+
+  permitId String
+  permit   Permit @relation(fields: [permitId], references: [id], onDelete: Cascade)
+
+  @@index([permitId])
+  @@map("messages")
+}
+
+model ActivityLog {
+  id          String   @id @default(cuid())
+  action      String
+  entityType  String
+  entityId    String
+  description String
+  metadata    Json?
+  createdAt   DateTime @default(now())
+
+  userId   String?
+  user     User?   @relation(fields: [userId], references: [id])
+  permitId String?
+  permit   Permit? @relation(fields: [permitId], references: [id], onDelete: Cascade)
+
+  @@index([permitId])
+  @@index([userId])
+  @@index([entityType, entityId])
+  @@map("activity_logs")
+}
+
+model Notification {
+  id        String    @id @default(cuid())
+  type      String
+  title     String
+  body      String
+  data      Json?
+  isRead    Boolean   @default(false)
+  readAt    DateTime?
+  createdAt DateTime  @default(now())
+
+  userId String
+  user   User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, isRead])
+  @@map("notifications")
+}
+
+model PushToken {
+  id        String   @id @default(cuid())
+  token     String   @unique
+  platform  String
+  createdAt DateTime @default(now())
+
+  userId String
+  user   User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("push_tokens")
+}
+
+// ============================================
+// JURISDICTION DATABASE
+// ============================================
+
+model Jurisdiction {
+  id              String    @id @default(cuid())
+  name            String
+  type            String
+  state           String
+  county          String?
+  fips            String?
+  permitPortalUrl String?
+  websiteUrl      String?
+  phone           String?
+  email           String?
+  address         String?
+  officeHours     Json?
+  fees            Json?
+  requirements    Json?
+  notes           String?
+  isVerified      Boolean   @default(false)
+  lastVerifiedAt  DateTime?
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+
+  parentId String?
+  parent   Jurisdiction?  @relation("JurisdictionHierarchy", fields: [parentId], references: [id])
+  children Jurisdiction[] @relation("JurisdictionHierarchy")
+
+  properties    Property[]
+  permits       Permit[]
+  formTemplates FormTemplate[]
+
+  @@unique([name, state, type])
+  @@index([state])
+  @@index([state, county])
+  @@map("jurisdictions")
+}
+
+// ============================================
+// VENDOR PORTAL
+// ============================================
+
+model VendorProfile {
+  id              String    @id @default(cuid())
+  companyName     String
+  description     String?
+  specialties     String[]
+  serviceAreas    String[]
+  website         String?
+  logoUrl         String?
+  isVerified      Boolean   @default(false)
+  rating          Float?    @default(0)
+  reviewCount     Int       @default(0)
+  isActive        Boolean   @default(true)
+  stripeConnectId String?
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+
+  userId   String          @unique
+  user     User            @relation(fields: [userId], references: [id])
+  licenses VendorLicense[]
+  insurance VendorInsurance[]
+  reviews  VendorReview[]
+  photos   VendorPhoto[]
+  transactions VendorTransaction[]
+
+  @@map("vendor_profiles")
+}
+
+model VendorLicense {
+  id            String    @id @default(cuid())
+  subcodeType   String
+  licenseNumber String
+  licenseState  String
+  issuedBy      String?
+  issuedAt      DateTime?
+  expiresAt     DateTime?
+  documentUrl   String?
+  isVerified    Boolean   @default(false)
+  verifiedAt    DateTime?
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+
+  vendorId String
+  vendor   VendorProfile @relation(fields: [vendorId], references: [id], onDelete: Cascade)
+
+  @@index([vendorId])
+  @@index([subcodeType])
+  @@map("vendor_licenses")
+}
+
+model VendorInsurance {
+  id             String    @id @default(cuid())
+  type           String    // GENERAL_LIABILITY, WORKERS_COMP, PROFESSIONAL_LIABILITY
+  provider       String?
+  policyNumber   String?
+  coverageAmount Float?
+  expiresAt      DateTime
+  documentUrl    String?
+  isVerified     Boolean   @default(false)
+  verifiedAt     DateTime?
+  createdAt      DateTime  @default(now())
+  updatedAt      DateTime  @updatedAt
+
+  vendorId String
+  vendor   VendorProfile @relation(fields: [vendorId], references: [id], onDelete: Cascade)
+
+  @@index([vendorId])
+  @@map("vendor_insurance")
+}
+
+model VendorPhoto {
+  id          String   @id @default(cuid())
+  fileUrl     String
+  caption     String?
+  projectType String?
+  createdAt   DateTime @default(now())
+
+  vendorId String
+  vendor   VendorProfile @relation(fields: [vendorId], references: [id], onDelete: Cascade)
+
+  @@index([vendorId])
+  @@map("vendor_photos")
+}
+
+model VendorReview {
+  id         String   @id @default(cuid())
+  rating     Int
+  comment    String?
+  createdAt  DateTime @default(now())
+
+  vendorId   String
+  vendor     VendorProfile @relation(fields: [vendorId], references: [id], onDelete: Cascade)
+  reviewerId String
+
+  @@map("vendor_reviews")
+}
+
+model VendorTransaction {
+  id               String   @id @default(cuid())
+  amount           Float
+  platformFee      Float    // 3% of amount
+  stripePaymentId  String?
+  status           String   @default("PENDING") // PENDING, COMPLETED, FAILED, REFUNDED
+  description      String?
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
+
+  vendorId String
+  vendor   VendorProfile @relation(fields: [vendorId], references: [id])
+
+  @@index([vendorId])
+  @@map("vendor_transactions")
+}
+
+// ============================================
+// AI CHATBOT
+// ============================================
+
+model ChatConversation {
+  id        String   @id @default(cuid())
+  title     String?
+  context   Json?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  userId   String
+  user     User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+  messages ChatMessage[]
+
+  @@index([userId])
+  @@map("chat_conversations")
+}
+
+model ChatMessage {
+  id             String   @id @default(cuid())
+  role           String
+  content        String   @db.Text
+  citations      Json?
+  tokenCount     Int?
+  model          String?
+  createdAt      DateTime @default(now())
+
+  conversationId String
+  conversation   ChatConversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+
+  @@index([conversationId])
+  @@map("chat_messages")
+}
+
+model KnowledgeDocument {
+  id         String   @id @default(cuid())
+  title      String
+  source     String
+  sourceType String
+  jurisdiction String?
+  content    String   @db.Text
+  metadata   Json?
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  chunks KnowledgeChunk[]
+
+  @@map("knowledge_documents")
+}
+
+model KnowledgeChunk {
+  id         String   @id @default(cuid())
+  content    String   @db.Text
+  metadata   Json?
+  chunkIndex Int
+  createdAt  DateTime @default(now())
+
+  documentId String
+  document   KnowledgeDocument @relation(fields: [documentId], references: [id], onDelete: Cascade)
+
+  @@index([documentId])
+  @@map("knowledge_chunks")
+}
+
+// ============================================
+// SUBSCRIPTIONS & BILLING
+// ============================================
+
+model Subscription {
+  id                   String    @id @default(cuid())
+  plan                 String    @default("FREE")
+  status               String    @default("ACTIVE")
+  stripeSubscriptionId String?   @unique
+  stripePriceId        String?
+  currentPeriodStart   DateTime?
+  currentPeriodEnd     DateTime?
+  cancelAtPeriodEnd    Boolean   @default(false)
+  trialEnd             DateTime?
+  aiCreditsRemaining   Int       @default(5)
+  aiCreditsTotal       Int       @default(5)
+  createdAt            DateTime  @default(now())
+  updatedAt            DateTime  @updatedAt
+
+  userId String @unique
+  user   User   @relation(fields: [userId], references: [id])
+
+  @@map("subscriptions")
+}
+
+// ============================================
+// EMAIL AUTOMATION
+// ============================================
+
+model EmailTemplate {
+  id        String   @id @default(cuid())
+  name      String
+  subject   String
+  body      String   @db.Text
+  category  String
+  isDefault Boolean  @default(false)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@map("email_templates")
+}
+
+model EmailLog {
+  id         String   @id @default(cuid())
+  to         String
+  subject    String
+  body       String   @db.Text
+  status     String   @default("SENT")
+  resendId   String?
+  templateId String?
+  permitId   String?
+  createdAt  DateTime @default(now())
+
+  @@map("email_logs")
+}
