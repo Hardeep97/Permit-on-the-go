@@ -19,6 +19,14 @@ export type {
   SubmitFormInput,
   UpdateFormSubmissionInput,
 } from "../validators/form";
+export type {
+  CreateVendorProfileInput,
+  UpdateVendorProfileInput,
+  AddVendorLicenseInput,
+  AddVendorInsuranceInput,
+  CreateVendorReviewInput,
+  VendorSearchInput,
+} from "../validators/vendor";
 
 // API response types
 export interface ApiResponse<T = unknown> {
@@ -141,8 +149,69 @@ export interface VendorProfile {
   description?: string;
   specialties: string[];
   serviceAreas: string[];
+  website?: string;
+  logoUrl?: string;
   isVerified: boolean;
   rating?: number;
   reviewCount: number;
+  isActive: boolean;
+  stripeConnectId?: string;
+  createdAt: string;
   user?: User;
+  licenses?: VendorLicense[];
+  insurance?: VendorInsurance[];
+  photos?: VendorPhoto[];
+  reviews?: VendorReview[];
+}
+
+export interface VendorLicense {
+  id: string;
+  subcodeType: string;
+  licenseNumber: string;
+  licenseState: string;
+  issuedBy?: string;
+  issuedAt?: string;
+  expiresAt?: string;
+  documentUrl?: string;
+  isVerified: boolean;
+  verifiedAt?: string;
+}
+
+export interface VendorInsurance {
+  id: string;
+  type: string;
+  provider?: string;
+  policyNumber?: string;
+  coverageAmount?: number;
+  expiresAt: string;
+  documentUrl?: string;
+  isVerified: boolean;
+  verifiedAt?: string;
+}
+
+export interface VendorPhoto {
+  id: string;
+  fileUrl: string;
+  caption?: string;
+  projectType?: string;
+  createdAt: string;
+}
+
+export interface VendorReview {
+  id: string;
+  rating: number;
+  comment?: string;
+  createdAt: string;
+  reviewerId: string;
+  reviewer?: { name: string; avatarUrl?: string };
+}
+
+export interface VendorTransaction {
+  id: string;
+  amount: number;
+  platformFee: number;
+  stripePaymentId?: string;
+  status: string;
+  description?: string;
+  createdAt: string;
 }

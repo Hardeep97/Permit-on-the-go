@@ -43,7 +43,7 @@ const MENU_SECTIONS: { title: string; items: MenuItem[] }[] = [
         label: "Vendor Portal",
         icon: "storefront-outline",
         subtitle: "Connect with vendors",
-        onPress: () => {},
+        onPress: () => router.push("/vendor-portal/"),
       },
     ],
   },
