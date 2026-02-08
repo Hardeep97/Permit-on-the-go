@@ -69,7 +69,7 @@ export default function PermitTasksPage() {
       const res = await fetch(`/api/permits/${permitId}/tasks`);
       if (res.ok) {
         const data = await res.json();
-        setTasks(data.data || []);
+        setTasks(data.data?.tasks || []);
       }
     } catch (err) {
       console.error("Failed to fetch tasks:", err);

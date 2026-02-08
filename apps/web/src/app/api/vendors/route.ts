@@ -14,11 +14,11 @@ export async function GET(request: NextRequest) {
     const { searchParams } = new URL(request.url);
 
     const parsed = vendorSearchSchema.safeParse({
-      query: searchParams.get("query"),
-      subcodeType: searchParams.get("subcodeType"),
-      serviceArea: searchParams.get("serviceArea"),
-      isVerified: searchParams.get("isVerified"),
-      minRating: searchParams.get("minRating"),
+      query: searchParams.get("query") ?? undefined,
+      subcodeType: searchParams.get("subcodeType") ?? undefined,
+      serviceArea: searchParams.get("serviceArea") ?? undefined,
+      isVerified: searchParams.get("isVerified") ?? undefined,
+      minRating: searchParams.get("minRating") ?? undefined,
       page: searchParams.get("page") || "1",
       pageSize: searchParams.get("pageSize") || "12",
     });

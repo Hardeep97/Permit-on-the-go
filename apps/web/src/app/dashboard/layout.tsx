@@ -3,6 +3,7 @@
 import { useState, useEffect, useRef, useCallback } from "react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
+import { useSession, signOut } from "next-auth/react";
 import {
   LayoutDashboard,
   Building2,
@@ -38,7 +39,7 @@ interface Notification {
   id: string;
   title: string;
   body: string;
-  read: boolean;
+  readAt: string | null;
   createdAt: string;
   data?: {
     actionUrl?: string;
@@ -74,7 +75,9 @@ function NotificationDropdown() {
   const [loading, setLoading] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
 
-  const unreadCount = notifications.filter((n) => !n.read).length;
+  const unreadCount = Array.isArray(notifications)
+    ? notifications.filter((n) => !n.readAt).length
+    : 0;
 
   const fetchNotifications = useCallback(async () => {
     setLoading(true);
@@ -82,7 +85,7 @@ function NotificationDropdown() {
       const res = await fetch("/api/notifications");
       if (res.ok) {
         const json = await res.json();
-        setNotifications(json.data ?? []);
+        setNotifications(json.data?.notifications ?? []);
       }
     } catch {
       // silently fail
@@ -132,7 +135,7 @@ function NotificationDropdown() {
 
   const handleNotificationClick = async (notification: Notification) => {
     // Mark individual notification as read
-    if (!notification.read) {
+    if (!notification.readAt) {
       try {
         await fetch(`/api/notifications/${notification.id}`, {
           method: "PATCH",
@@ -217,12 +220,12 @@ function NotificationDropdown() {
                     onClick={() => handleNotificationClick(notification)}
                     className={cn(
                       "flex w-full items-start gap-3 px-4 py-3 text-left transition-colors hover:bg-neutral-50",
-                      !notification.read && "bg-primary-50/50"
+                      !notification.readAt && "bg-primary-50/50"
                     )}
                   >
                     {/* Unread indicator */}
                     <div className="mt-1.5 flex-shrink-0">
-                      {!notification.read ? (
+                      {!notification.readAt ? (
                         <div className="h-2 w-2 rounded-full bg-primary-600" />
                       ) : (
                         <div className="h-2 w-2" />
@@ -232,7 +235,7 @@ function NotificationDropdown() {
                       <p
                         className={cn(
                           "text-sm",
-                          !notification.read
+                          !notification.readAt
                             ? "font-semibold text-neutral-900"
                             : "font-medium text-neutral-700"
                         )}
@@ -263,6 +266,10 @@ export default function DashboardLayout({
   children: React.ReactNode;
 }) {
   const pathname = usePathname();
+  const { data: session } = useSession();
+  const userName = session?.user?.name || "User";
+  const userEmail = session?.user?.email || "";
+  const userInitial = userName.charAt(0).toUpperCase();
 
   return (
     <div className="flex h-screen bg-neutral-50">
@@ -312,17 +319,21 @@ export default function DashboardLayout({
         <div className="border-t border-neutral-200 p-4">
           <div className="flex items-center gap-3">
             <div className="flex h-9 w-9 items-center justify-center rounded-full bg-primary-100 text-sm font-semibold text-primary-700">
-              U
+              {userInitial}
             </div>
             <div className="flex-1 min-w-0">
               <p className="truncate text-sm font-medium text-neutral-900">
-                User
+                {userName}
               </p>
               <p className="truncate text-xs text-neutral-500">
-                user@example.com
+                {userEmail}
               </p>
             </div>
-            <button className="rounded-lg p-1.5 text-neutral-400 hover:bg-neutral-100 hover:text-neutral-600 transition-colors">
+            <button
+              onClick={() => signOut({ callbackUrl: "/login" })}
+              className="rounded-lg p-1.5 text-neutral-400 hover:bg-neutral-100 hover:text-neutral-600 transition-colors"
+              title="Sign out"
+            >
               <LogOut className="h-4 w-4" />
             </button>
           </div>
@@ -337,7 +348,7 @@ export default function DashboardLayout({
           <div className="flex items-center gap-4">
             <NotificationDropdown />
             <div className="flex h-9 w-9 items-center justify-center rounded-full bg-primary-100 text-sm font-semibold text-primary-700">
-              U
+              {userInitial}
             </div>
           </div>
         </header>

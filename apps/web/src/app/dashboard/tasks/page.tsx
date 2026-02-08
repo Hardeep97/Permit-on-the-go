@@ -70,7 +70,7 @@ export default function MyTasksPage() {
       const res = await fetch(url);
       if (res.ok) {
         const data = await res.json();
-        setTasks(data.data || []);
+        setTasks(data.data?.tasks || []);
       }
     } catch (err) {
       console.error("Failed to fetch tasks:", err);

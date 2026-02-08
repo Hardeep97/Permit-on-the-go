@@ -87,10 +87,11 @@ export default function VendorMarketplacePage() {
       const res = await fetch(`/api/vendors?${params.toString()}`);
       if (!res.ok) throw new Error("Failed to load vendors");
 
-      const json: VendorsResponse = await res.json();
-      setVendors(json.vendors ?? []);
-      setTotalPages(json.totalPages ?? 1);
-      setTotal(json.total ?? 0);
+      const json = await res.json();
+      const responseData: VendorsResponse = json.data ?? {};
+      setVendors(responseData.vendors ?? []);
+      setTotalPages(responseData.totalPages ?? 1);
+      setTotal(responseData.total ?? 0);
     } catch (err) {
       setError(err instanceof Error ? err.message : "An error occurred");
     } finally {
