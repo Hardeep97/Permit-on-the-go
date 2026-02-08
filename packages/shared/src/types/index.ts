@@ -34,6 +34,11 @@ export type {
   UpdateChecklistItemInput,
   CreateWorkflowTemplateInput,
 } from "../validators/task";
+export type {
+  CreateJurisdictionInput,
+  UpdateJurisdictionInput,
+  JurisdictionSearchInput,
+} from "../validators/jurisdiction";
 
 // API response types
 export interface ApiResponse<T = unknown> {
@@ -144,10 +149,25 @@ export interface Jurisdiction {
   type: string;
   state: string;
   county?: string;
+  fips?: string;
   permitPortalUrl?: string;
+  websiteUrl?: string;
   phone?: string;
   email?: string;
   address?: string;
+  officeHours?: Record<string, string>;
+  fees?: Record<string, unknown>;
+  requirements?: string[];
+  notes?: string;
+  isVerified: boolean;
+  parentId?: string;
+  parent?: { id: string; name: string; type: string };
+  children?: Jurisdiction[];
+  _count?: {
+    properties?: number;
+    permits?: number;
+    children?: number;
+  };
 }
 
 export interface VendorProfile {

@@ -85,6 +85,356 @@ async function main() {
 
   console.log(`Created ${municipalities.length} NJ jurisdictions`);
 
+  // ============================================================
+  // MULTI-STATE JURISDICTIONS — All 50 States + DC + Top Cities
+  // ============================================================
+
+  const usStates: { code: string; name: string }[] = [
+    { code: "AL", name: "Alabama" },
+    { code: "AK", name: "Alaska" },
+    { code: "AZ", name: "Arizona" },
+    { code: "AR", name: "Arkansas" },
+    { code: "CA", name: "California" },
+    { code: "CO", name: "Colorado" },
+    { code: "CT", name: "Connecticut" },
+    { code: "DE", name: "Delaware" },
+    { code: "FL", name: "Florida" },
+    { code: "GA", name: "Georgia" },
+    { code: "HI", name: "Hawaii" },
+    { code: "ID", name: "Idaho" },
+    { code: "IL", name: "Illinois" },
+    { code: "IN", name: "Indiana" },
+    { code: "IA", name: "Iowa" },
+    { code: "KS", name: "Kansas" },
+    { code: "KY", name: "Kentucky" },
+    { code: "LA", name: "Louisiana" },
+    { code: "ME", name: "Maine" },
+    { code: "MD", name: "Maryland" },
+    { code: "MA", name: "Massachusetts" },
+    { code: "MI", name: "Michigan" },
+    { code: "MN", name: "Minnesota" },
+    { code: "MS", name: "Mississippi" },
+    { code: "MO", name: "Missouri" },
+    { code: "MT", name: "Montana" },
+    { code: "NE", name: "Nebraska" },
+    { code: "NV", name: "Nevada" },
+    { code: "NH", name: "New Hampshire" },
+    { code: "NM", name: "New Mexico" },
+    { code: "NY", name: "New York" },
+    { code: "NC", name: "North Carolina" },
+    { code: "ND", name: "North Dakota" },
+    { code: "OH", name: "Ohio" },
+    { code: "OK", name: "Oklahoma" },
+    { code: "OR", name: "Oregon" },
+    { code: "PA", name: "Pennsylvania" },
+    { code: "RI", name: "Rhode Island" },
+    { code: "SC", name: "South Carolina" },
+    { code: "SD", name: "South Dakota" },
+    { code: "TN", name: "Tennessee" },
+    { code: "TX", name: "Texas" },
+    { code: "UT", name: "Utah" },
+    { code: "VT", name: "Vermont" },
+    { code: "VA", name: "Virginia" },
+    { code: "WA", name: "Washington" },
+    { code: "WV", name: "West Virginia" },
+    { code: "WI", name: "Wisconsin" },
+    { code: "WY", name: "Wyoming" },
+    { code: "DC", name: "District of Columbia" },
+  ];
+
+  // Map stateCode -> jurisdictionId for parentId references
+  const stateJurisdictionMap = new Map<string, string>();
+
+  // NJ already created above, store its id
+  stateJurisdictionMap.set("NJ", njState.id);
+
+  for (const st of usStates) {
+    const stateRecord = await prisma.jurisdiction.upsert({
+      where: { name_state_type: { name: st.name, state: st.code, type: "STATE" } },
+      update: {},
+      create: {
+        name: st.name,
+        type: "STATE",
+        state: st.code,
+        isVerified: true,
+      },
+    });
+    stateJurisdictionMap.set(st.code, stateRecord.id);
+  }
+
+  console.log(`Created ${usStates.length} additional state jurisdictions (${usStates.length + 1} total including NJ)`);
+
+  // Top 10 cities per 14 major states
+  const stateCities: Record<string, string[]> = {
+    NY: ["New York City", "Buffalo", "Rochester", "Yonkers", "Syracuse", "Albany", "New Rochelle", "Mount Vernon", "Schenectady", "Utica"],
+    CA: ["Los Angeles", "San Francisco", "San Diego", "San Jose", "Sacramento", "Oakland", "Long Beach", "Fresno", "Anaheim", "Santa Ana"],
+    PA: ["Philadelphia", "Pittsburgh", "Allentown", "Reading", "Erie", "Scranton", "Bethlehem", "Lancaster", "Harrisburg", "York"],
+    FL: ["Miami", "Jacksonville", "Tampa", "Orlando", "St. Petersburg", "Hialeah", "Fort Lauderdale", "Tallahassee", "Cape Coral", "Pembroke Pines"],
+    TX: ["Houston", "Dallas", "San Antonio", "Austin", "Fort Worth", "El Paso", "Arlington", "Corpus Christi", "Plano", "Laredo"],
+    IL: ["Chicago", "Aurora", "Joliet", "Naperville", "Rockford", "Springfield", "Elgin", "Peoria", "Champaign", "Waukegan"],
+    OH: ["Columbus", "Cleveland", "Cincinnati", "Toledo", "Akron", "Dayton", "Canton", "Youngstown", "Lorain", "Hamilton"],
+    GA: ["Atlanta", "Augusta", "Columbus", "Savannah", "Athens", "Sandy Springs", "Roswell", "Macon", "Johns Creek", "Albany"],
+    NC: ["Charlotte", "Raleigh", "Greensboro", "Durham", "Winston-Salem", "Fayetteville", "Cary", "Wilmington", "High Point", "Concord"],
+    MA: ["Boston", "Worcester", "Springfield", "Lowell", "Cambridge", "New Bedford", "Brockton", "Quincy", "Lynn", "Fall River"],
+    CT: ["Bridgeport", "New Haven", "Hartford", "Stamford", "Waterbury", "Norwalk", "Danbury", "New Britain", "Bristol", "Meriden"],
+    VA: ["Virginia Beach", "Norfolk", "Chesapeake", "Richmond", "Newport News", "Alexandria", "Hampton", "Roanoke", "Portsmouth", "Suffolk"],
+    MD: ["Baltimore", "Columbia", "Germantown", "Silver Spring", "Waldorf", "Glen Burnie", "Ellicott City", "Frederick", "Dundalk", "Rockville"],
+    WA: ["Seattle", "Spokane", "Tacoma", "Vancouver", "Bellevue", "Kent", "Everett", "Renton", "Federal Way", "Spokane Valley"],
+  };
+
+  let totalCitiesCreated = 0;
+
+  for (const [stateCode, cities] of Object.entries(stateCities)) {
+    const parentId = stateJurisdictionMap.get(stateCode);
+    for (const cityName of cities) {
+      await prisma.jurisdiction.upsert({
+        where: { name_state_type: { name: cityName, state: stateCode, type: "CITY" } },
+        update: {},
+        create: {
+          name: cityName,
+          type: "CITY",
+          state: stateCode,
+          parentId: parentId,
+          isVerified: true,
+        },
+      });
+      totalCitiesCreated++;
+    }
+  }
+
+  console.log(`Created ${totalCitiesCreated} city jurisdictions across ${Object.keys(stateCities).length} states`);
+
+  // ============================================================
+  // STATE PERMIT GUIDE KNOWLEDGE DOCS — Top 5 States
+  // ============================================================
+
+  const statePermitGuides = [
+    {
+      id: "kb-ny-permit-guide",
+      title: "New York State Building Code & Permit Guide",
+      source: "ny-permit-guide",
+      sourceType: "GUIDE",
+      jurisdiction: "NY",
+      content: `# New York State Building Code & Permit Guide
+
+## Building Code System
+
+New York State enforces the Uniform Fire Prevention and Building Code, commonly known as the NYS Building Code. The code is based on the International Code Council (ICC) family of codes with New York-specific amendments. The NYS Department of State, Division of Building Standards and Codes oversees the statewide code.
+
+## Key Agencies
+
+- **NYS Department of State, Division of Building Standards and Codes**: Sets statewide building standards, provides training, and oversees local enforcement.
+- **NYC Department of Buildings (DOB)**: New York City operates its own building code (NYC Building Code) separate from the rest of the state, based on the 1968 code with ongoing updates.
+- **Local Code Enforcement Officers**: Outside NYC, municipalities appoint local code enforcement officials who review plans, issue permits, and conduct inspections.
+
+## General Permit Process
+
+1. Determine if a permit is required by contacting your local building department or NYC DOB.
+2. Prepare construction documents including architectural and engineering plans.
+3. Submit the application with all required forms, fees, and supporting documents.
+4. Await plan review by the code enforcement official (timelines vary by municipality).
+5. Receive the building permit upon approval.
+6. Post the permit at the job site and begin work per approved plans.
+7. Schedule inspections at required stages (foundation, framing, rough trades, final).
+8. Obtain a Certificate of Occupancy or Certificate of Compliance upon passing final inspection.
+
+## Notable Requirements
+
+- NYC projects must comply with the NYC Building Code which has unique zoning and energy requirements.
+- The state mandates energy code compliance per the NYS Energy Conservation Construction Code (based on IECC).
+- Asbestos surveys are required for renovation or demolition of structures built before 1974 under state labor law.
+- Licensed professional engineers (PE) or registered architects (RA) must stamp plans for most non-exempt projects.
+- New York requires a 10-day notice to the Department of Labor for certain demolition and construction activities.`,
+    },
+    {
+      id: "kb-ca-permit-guide",
+      title: "California Building Code & Permit Guide",
+      source: "ca-permit-guide",
+      sourceType: "GUIDE",
+      jurisdiction: "CA",
+      content: `# California Building Code & Permit Guide
+
+## Building Code System
+
+California enforces the California Building Standards Code, commonly known as Title 24, published by the California Building Standards Commission (CBSC). Title 24 consists of 12 parts covering building, electrical, mechanical, plumbing, energy, fire, and accessibility standards. California adopts the ICC model codes with extensive state amendments, making it one of the most stringent codes in the nation.
+
+## Key Agencies
+
+- **California Building Standards Commission (CBSC)**: Adopts and publishes the California Building Standards Code (Title 24).
+- **Division of the State Architect (DSA)**: Reviews plans for public schools and community colleges.
+- **Office of Statewide Health Planning and Development (OSHPD)**: Reviews plans for hospitals and healthcare facilities.
+- **Local Building Departments**: Cities and counties enforce Title 24 for most private construction. Each jurisdiction may adopt local amendments that are more restrictive than the state code.
+
+## General Permit Process
+
+1. Check with your local building department to determine required permits and local amendments.
+2. Prepare plans that comply with all applicable parts of Title 24.
+3. Submit permit application with construction documents to the local building department.
+4. Plan check review (typically 2-6 weeks depending on project complexity).
+5. Pay permit fees, which are generally based on project valuation.
+6. Receive the building permit and begin construction.
+7. Schedule inspections at required milestones (foundation, framing, electrical, plumbing, mechanical, energy, final).
+8. Obtain a Certificate of Occupancy after passing all final inspections.
+
+## Notable Requirements
+
+- Title 24 Part 6 (Energy Code) imposes rigorous energy efficiency standards, including mandatory solar photovoltaic systems on new residential construction since 2020.
+- California requires seismic design per the California Building Code (CBC), which is more stringent than the base IBC.
+- CalGreen (Title 24 Part 11) mandates green building standards for new construction and major renovations.
+- Accessory Dwelling Unit (ADU) legislation streamlines permitting for secondary units statewide.
+- The California Environmental Quality Act (CEQA) may apply to larger projects, requiring environmental review.`,
+    },
+    {
+      id: "kb-pa-permit-guide",
+      title: "Pennsylvania Building Code & Permit Guide",
+      source: "pa-permit-guide",
+      sourceType: "GUIDE",
+      jurisdiction: "PA",
+      content: `# Pennsylvania Building Code & Permit Guide
+
+## Building Code System
+
+Pennsylvania enforces the Uniform Construction Code (PA UCC) under Act 45 of 1999. The PA UCC adopts the ICC family of codes including the International Building Code (IBC), International Residential Code (IRC), International Mechanical Code (IMC), International Plumbing Code (IPC), International Energy Conservation Code (IECC), and International Fire Code (IFC). The code is updated on a triennial cycle following ICC updates.
+
+## Key Agencies
+
+- **Pennsylvania Department of Labor & Industry (L&I)**: Administers and enforces the PA UCC statewide. Sets building code standards and certifies building code officials.
+- **Local Code Enforcement Agencies**: Municipalities can choose to enforce the UCC locally by adopting an ordinance and employing certified code officials. If a municipality opts out, the state's third-party agency program provides enforcement.
+- **Third-Party Agencies**: Approved by L&I to conduct plan reviews and inspections in municipalities that do not have their own code enforcement programs.
+
+## General Permit Process
+
+1. Contact your local building department or L&I to identify which entity handles permits in your municipality.
+2. Prepare construction documents in compliance with the PA UCC.
+3. Submit the permit application along with plans and required documentation.
+4. Plan review is conducted by the local code official or approved third-party agency.
+5. Pay applicable permit fees upon approval.
+6. Receive the building permit and post it at the construction site.
+7. Schedule inspections at each phase: foundation, framing, rough-in (electrical, plumbing, mechanical), insulation, and final.
+8. Obtain a Certificate of Occupancy after passing all required final inspections.
+
+## Notable Requirements
+
+- Pennsylvania requires all building code officials to be certified through L&I training programs.
+- Residential buildings of three stories or fewer follow the IRC; all others follow the IBC.
+- Act 13 (impact fee law) may apply in areas near natural gas drilling operations.
+- Accessibility requirements follow the PA UCC and the Americans with Disabilities Act (ADA).
+- Municipalities that opt out of local enforcement must use L&I-approved third-party agencies, which can affect review timelines.`,
+    },
+    {
+      id: "kb-fl-permit-guide",
+      title: "Florida Building Code & Permit Guide",
+      source: "fl-permit-guide",
+      sourceType: "GUIDE",
+      jurisdiction: "FL",
+      content: `# Florida Building Code & Permit Guide
+
+## Building Code System
+
+Florida enforces the Florida Building Code (FBC), administered by the Florida Building Commission under the Florida Department of Business and Professional Regulation (DBPR). The FBC is based on the ICC model codes with significant Florida-specific amendments, particularly for hurricane and wind resistance. The code is updated on a triennial cycle and includes the Florida Building Code - Building, Residential, Existing Building, Mechanical, Plumbing, Fuel Gas, and Energy Conservation volumes.
+
+## Key Agencies
+
+- **Florida Building Commission**: Adopts and maintains the Florida Building Code. Oversees the code development process with public input.
+- **Florida Department of Business and Professional Regulation (DBPR)**: Licenses contractors and regulates building-related professions.
+- **Local Building Departments**: Cities and counties enforce the FBC. Local jurisdictions may not adopt local technical amendments that are less stringent than the FBC.
+- **Miami-Dade County**: Maintains additional high-velocity hurricane zone (HVHZ) requirements with its own product approval process.
+
+## General Permit Process
+
+1. Contact your local building department to determine permit requirements.
+2. Prepare construction documents compliant with the current edition of the FBC.
+3. Submit the permit application with plans, surveys, and required documents.
+4. Plan review by local building officials (Florida law requires a 30-business-day maximum for review of single-family residential permits).
+5. Pay permit and impact fees.
+6. Receive the building permit.
+7. Schedule inspections at required stages: foundation, slab, framing, roofing, rough-in trades, insulation, and final.
+8. Obtain a Certificate of Occupancy or Certificate of Completion upon passing final inspection.
+
+## Notable Requirements
+
+- Florida's High-Velocity Hurricane Zone (HVHZ) code applies in Miami-Dade and Broward counties with stricter wind-resistance standards.
+- All products used in construction must be approved through the Florida Product Approval system.
+- Licensed general contractors, building contractors, or specialty contractors are required for most work (homeowner exemptions exist for owner-occupied single-family homes).
+- The Florida Energy Code mandates energy efficiency standards including HVAC efficiency, insulation, and fenestration requirements.
+- Flood zone compliance is required in FEMA-designated flood hazard areas, which are extensive throughout Florida.`,
+    },
+    {
+      id: "kb-tx-permit-guide",
+      title: "Texas Building Code & Permit Guide",
+      source: "tx-permit-guide",
+      sourceType: "GUIDE",
+      jurisdiction: "TX",
+      content: `# Texas Building Code & Permit Guide
+
+## Building Code System
+
+Texas does not have a mandatory statewide building code for all construction. Instead, the state sets minimum standards for certain building types and allows municipalities to adopt and enforce their own building codes. Most Texas cities adopt the International Building Code (IBC) and International Residential Code (IRC) with local amendments. Unincorporated areas in many counties have no building code enforcement at all. For specific building types, the state mandates compliance: the Texas Industrialized Housing and Buildings program governs factory-built structures, and the Texas Accessibility Standards (TAS) apply statewide.
+
+## Key Agencies
+
+- **Texas Department of Licensing and Regulation (TDLR)**: Enforces the Texas Accessibility Standards (TAS), regulates industrialized housing, and licenses certain trades (electricians, HVAC technicians).
+- **Texas Department of Insurance (TDI)**: Regulates windstorm-resistant construction along the Texas Gulf Coast through the Windstorm Inspection Program.
+- **Local Building Departments**: Cities and some counties adopt and enforce building codes locally. Houston, Dallas, San Antonio, Austin, and other major cities have their own building departments and adopted codes.
+
+## General Permit Process
+
+1. Contact your city or county building department to determine if permits are required in your jurisdiction.
+2. Prepare construction documents in compliance with the locally adopted code edition.
+3. Submit the permit application with plans, site surveys, and required documentation.
+4. Plan review by local building officials (review timelines vary by city; some cities offer expedited review for a fee).
+5. Pay permit fees, typically based on project valuation or square footage.
+6. Receive the building permit and post it at the construction site.
+7. Schedule inspections at required stages: foundation, framing, mechanical, electrical, plumbing, insulation, and final.
+8. Obtain a Certificate of Occupancy after passing all inspections.
+
+## Notable Requirements
+
+- Texas does not require a state contractor license; licensing is handled at the municipal level. Some cities require contractor registration.
+- The Texas Windstorm Insurance Association (TWIA) requires windstorm-resistant construction certificates (WPI-8) for properties in designated coastal counties.
+- Licensed electricians are required statewide (regulated by TDLR). HVAC contractors need state registration.
+- Texas Accessibility Standards (TAS) based on ADA apply to commercial and public buildings statewide.
+- Rural and unincorporated areas may have minimal or no building code enforcement, but lender and insurance requirements still apply.`,
+    },
+  ];
+
+  for (const doc of statePermitGuides) {
+    await prisma.knowledgeDocument.upsert({
+      where: { id: doc.id },
+      update: { content: doc.content },
+      create: {
+        id: doc.id,
+        title: doc.title,
+        source: doc.source,
+        sourceType: doc.sourceType,
+        jurisdiction: doc.jurisdiction,
+        content: doc.content,
+      },
+    });
+
+    // Create chunks (simple paragraph-based chunking for seed data)
+    const paragraphs = doc.content.split(/\n\n+/).filter((p) => p.trim().length > 50);
+    const chunkSize = 3;
+    const chunks: string[] = [];
+
+    for (let i = 0; i < paragraphs.length; i += chunkSize) {
+      chunks.push(paragraphs.slice(i, i + chunkSize).join("\n\n"));
+    }
+
+    // Delete existing chunks for this document before recreating
+    await prisma.knowledgeChunk.deleteMany({ where: { documentId: doc.id } });
+
+    await prisma.knowledgeChunk.createMany({
+      data: chunks.map((chunk, index) => ({
+        content: chunk,
+        chunkIndex: index,
+        documentId: doc.id,
+      })),
+    });
+  }
+
+  console.log(`Created ${statePermitGuides.length} state permit guide knowledge documents with chunks`);
+
   // Find Newark jurisdiction
   const newark = await prisma.jurisdiction.findFirst({
     where: { name: "City of Newark", state: "NJ" },
