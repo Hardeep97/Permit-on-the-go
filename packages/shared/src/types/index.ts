@@ -14,6 +14,11 @@ export type {
   CreateMilestoneInput,
   CreateInspectionInput,
 } from "../validators/permit";
+export type {
+  CreateFormTemplateInput,
+  SubmitFormInput,
+  UpdateFormSubmissionInput,
+} from "../validators/form";
 
 // API response types
 export interface ApiResponse<T = unknown> {

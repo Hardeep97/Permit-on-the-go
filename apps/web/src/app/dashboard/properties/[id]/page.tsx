@@ -17,6 +17,7 @@ import {
   Home,
   Ruler,
   Layers,
+  MessageCircle,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
@@ -160,12 +161,20 @@ export default function PropertyDetailPage() {
             </div>
           </div>
         </div>
-        <Link href={`/dashboard/permits/new?propertyId=${property.id}`}>
-          <Button size="sm">
-            <Plus className="h-4 w-4" />
-            New Permit
-          </Button>
-        </Link>
+        <div className="flex items-center gap-2">
+          <Link href={`/dashboard/chat?propertyId=${property.id}`}>
+            <Button size="sm" variant="outline">
+              <MessageCircle className="h-4 w-4" />
+              Ask AI
+            </Button>
+          </Link>
+          <Link href={`/dashboard/permits/new?propertyId=${property.id}`}>
+            <Button size="sm">
+              <Plus className="h-4 w-4" />
+              New Permit
+            </Button>
+          </Link>
+        </div>
       </div>
 
       <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">

@@ -505,6 +505,25 @@ export default function PermitDetailScreen() {
           </TouchableOpacity>
         </View>
 
+        {/* Forms & AI Actions */}
+        <View className="flex-row px-4 mt-2 gap-2">
+          <TouchableOpacity
+            className="flex-1 bg-white rounded-xl py-3 flex-row items-center justify-center"
+            style={{
+              shadowColor: "#000",
+              shadowOffset: { width: 0, height: 1 },
+              shadowOpacity: 0.05,
+              shadowRadius: 3,
+              elevation: 1,
+            }}
+            onPress={() => router.push(`/permit/${id}/forms` as never)}
+            activeOpacity={0.7}
+          >
+            <Ionicons name="document-text-outline" size={18} color="#7C3AED" style={{ marginRight: 6 }} />
+            <Text className="text-xs font-semibold text-purple-600">Subcode Forms</Text>
+          </TouchableOpacity>
+        </View>
+
         {/* Tab Segments */}
         <View className="mt-4">
           <ScrollView

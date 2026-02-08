@@ -295,22 +295,42 @@ export default function PropertyDetailScreen() {
         <View style={{ height: 80 }} />
       </ScrollView>
 
-      {/* FAB - New Permit */}
-      <TouchableOpacity
-        className="absolute bottom-6 right-6 bg-brand-600 rounded-2xl px-5 py-3.5 flex-row items-center"
-        style={{
-          shadowColor: "#2563EB",
-          shadowOffset: { width: 0, height: 4 },
-          shadowOpacity: 0.3,
-          shadowRadius: 8,
-          elevation: 6,
-        }}
-        onPress={() => router.push("/permit/new")}
-        activeOpacity={0.8}
-      >
-        <Ionicons name="add" size={20} color="#FFFFFF" style={{ marginRight: 6 }} />
-        <Text className="text-white font-bold text-sm">New Permit</Text>
-      </TouchableOpacity>
+      {/* FAB Row - Ask AI + New Permit */}
+      <View className="absolute bottom-6 right-6 flex-row gap-3">
+        <TouchableOpacity
+          className="bg-white border border-brand-200 rounded-2xl px-4 py-3.5 flex-row items-center"
+          style={{
+            shadowColor: "#000",
+            shadowOffset: { width: 0, height: 2 },
+            shadowOpacity: 0.1,
+            shadowRadius: 4,
+            elevation: 3,
+          }}
+          onPress={() => {
+            // Navigate to chat tab — conversation will be created with property context
+            router.push("/(tabs)/chat" as never);
+          }}
+          activeOpacity={0.8}
+        >
+          <Ionicons name="sparkles" size={18} color="#2563EB" style={{ marginRight: 6 }} />
+          <Text className="text-brand-600 font-bold text-sm">Ask AI</Text>
+        </TouchableOpacity>
+        <TouchableOpacity
+          className="bg-brand-600 rounded-2xl px-5 py-3.5 flex-row items-center"
+          style={{
+            shadowColor: "#2563EB",
+            shadowOffset: { width: 0, height: 4 },
+            shadowOpacity: 0.3,
+            shadowRadius: 8,
+            elevation: 6,
+          }}
+          onPress={() => router.push("/permit/new")}
+          activeOpacity={0.8}
+        >
+          <Ionicons name="add" size={20} color="#FFFFFF" style={{ marginRight: 6 }} />
+          <Text className="text-white font-bold text-sm">New Permit</Text>
+        </TouchableOpacity>
+      </View>
     </SafeAreaView>
   );
 }

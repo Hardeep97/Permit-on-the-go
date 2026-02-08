@@ -1022,6 +1022,25 @@ export default function PermitDetailPage() {
                   </CardContent>
                 </Card>
               )}
+
+              {/* Quick Actions card */}
+              <Card>
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2">
+                    <FileText className="h-4 w-4 text-neutral-400" />
+                    Quick Actions
+                  </CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-2">
+                  <Link
+                    href={`/dashboard/permits/${permitId}/forms`}
+                    className="flex items-center gap-2 rounded-lg border border-neutral-200 p-3 text-sm font-medium text-neutral-700 transition-colors hover:bg-primary-50 hover:border-primary-200 hover:text-primary-700"
+                  >
+                    <FileText className="h-4 w-4" />
+                    Subcode Forms
+                  </Link>
+                </CardContent>
+              </Card>
             </div>
           </div>
         )}
