@@ -10,6 +10,7 @@ import {
 } from "@/lib/api-auth";
 import { logActivity, ACTIONS } from "@/lib/activity";
 import { triggerPhotoShareEmails } from "@/lib/email-triggers";
+import { checkPermitAccess, forbidden } from "@/lib/rbac";
 
 export async function POST(
   request: NextRequest,
@@ -32,6 +33,10 @@ export async function POST(
       include: { permit: true },
     });
     if (!photo) return notFound("Photo");
+
+    // RBAC: check permit access
+    const access = await checkPermitAccess(photo.permitId, user.id);
+    if (!access) return forbidden("You don't have access to this permit");
 
     // Create share records
     const shares = await Promise.all(

@@ -1,5 +1,7 @@
-import { View, Text, FlatList, Image, TouchableOpacity, Dimensions, Share, Alert } from "react-native";
+import { useState } from "react";
+import { View, Text, FlatList, Image, TouchableOpacity, Dimensions } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
+import PhotoShareModal from "./PhotoShareModal";
 
 interface Photo {
   id: string;
@@ -14,6 +16,7 @@ interface Photo {
 interface PhotoGridProps {
   photos: Photo[];
   loading?: boolean;
+  permitId: string;
   onPhotoPress?: (photo: Photo) => void;
   onUploadPress?: () => void;
 }
@@ -33,22 +36,13 @@ const STAGE_COLORS: Record<string, { bg: string; text: string }> = {
 function PhotoCard({
   photo,
   onPress,
+  onShare,
 }: {
   photo: Photo;
   onPress?: (photo: Photo) => void;
+  onShare: (photo: Photo) => void;
 }) {
   const stageStyle = photo.stage ? STAGE_COLORS[photo.stage] : null;
-
-  const handleShare = async () => {
-    try {
-      await Share.share({
-        message: `Check out this photo${photo.caption ? `: ${photo.caption}` : ""}`,
-        url: photo.fileUrl,
-      });
-    } catch (error) {
-      Alert.alert("Error", "Failed to share photo");
-    }
-  };
 
   return (
     <TouchableOpacity
@@ -73,7 +67,7 @@ function PhotoCard({
         {/* Share button overlay */}
         <TouchableOpacity
           className="absolute top-2 right-2 bg-black/40 rounded-full p-1.5"
-          onPress={handleShare}
+          onPress={() => onShare(photo)}
           hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
         >
           <Ionicons name="share-outline" size={14} color="#FFFFFF" />
@@ -104,7 +98,9 @@ function PhotoCard({
   );
 }
 
-export default function PhotoGrid({ photos, loading, onPhotoPress, onUploadPress }: PhotoGridProps) {
+export default function PhotoGrid({ photos, loading, permitId, onPhotoPress, onUploadPress }: PhotoGridProps) {
+  const [sharePhoto, setSharePhoto] = useState<Photo | null>(null);
+
   if (loading) {
     return (
       <View className="items-center justify-center py-12">
@@ -139,10 +135,21 @@ export default function PhotoGrid({ photos, loading, onPhotoPress, onUploadPress
         keyExtractor={(item) => item.id}
         numColumns={2}
         columnWrapperStyle={{ justifyContent: "space-between" }}
-        renderItem={({ item }) => <PhotoCard photo={item} onPress={onPhotoPress} />}
+        renderItem={({ item }) => (
+          <PhotoCard photo={item} onPress={onPhotoPress} onShare={setSharePhoto} />
+        )}
         showsVerticalScrollIndicator={false}
         scrollEnabled={false}
       />
+
+      {sharePhoto && (
+        <PhotoShareModal
+          visible={!!sharePhoto}
+          onClose={() => setSharePhoto(null)}
+          photoId={sharePhoto.id}
+          permitId={permitId}
+        />
+      )}
     </View>
   );
 }

@@ -1,5 +1,11 @@
 import { prisma } from "@permits/database";
-import { sendEmail, permitStatusUpdateEmail, inspectionReminderEmail } from "./email";
+import {
+  sendEmail,
+  permitStatusUpdateEmail,
+  inspectionReminderEmail,
+  partyAddedEmail,
+  photoShareEmail,
+} from "./email";
 import { PERMIT_STATUS_LABELS } from "@permits/shared";
 
 /**
@@ -64,8 +70,8 @@ export async function triggerStatusChangeEmails(
     });
 
     // Send emails in parallel
-    const promises = uniqueRecipients.map((recipient) => {
-      const { subject, html } = permitStatusUpdateEmail({
+    const promises = uniqueRecipients.map(async (recipient) => {
+      const { subject, html } = await permitStatusUpdateEmail({
         recipientName: recipient.name,
         permitTitle: permit.title,
         propertyAddress,
@@ -118,27 +124,13 @@ export async function triggerPartyAddedEmail(
 
     const propertyAddress = `${permit.property?.address}, ${permit.property?.city}, ${permit.property?.state}`;
 
-    const { subject, html } = {
-      subject: `You've been added to a permit: ${permit.title}`,
-      html: `
-        <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
-          <div style="background: #2563EB; color: white; padding: 20px; border-radius: 8px 8px 0 0;">
-            <h1 style="margin: 0; font-size: 20px;">Permits on the Go</h1>
-          </div>
-          <div style="padding: 24px; border: 1px solid #E5E7EB; border-top: none; border-radius: 0 0 8px 8px;">
-            <p>Hi ${partyName},</p>
-            <p><strong>${addedByName}</strong> has added you as <strong>${role}</strong> on the following permit:</p>
-            <div style="background: #F9FAFB; padding: 16px; border-radius: 8px; margin: 16px 0;">
-              <p style="margin: 4px 0;"><strong>Permit:</strong> ${permit.title}</p>
-              <p style="margin: 4px 0;"><strong>Property:</strong> ${propertyAddress}</p>
-              <p style="margin: 4px 0;"><strong>Your Role:</strong> ${role}</p>
-            </div>
-            <p>You can now view and collaborate on this permit through the platform.</p>
-            <p style="color: #6B7280; font-size: 12px;">Sent via Permits on the Go</p>
-          </div>
-        </div>
-      `,
-    };
+    const { subject, html } = await partyAddedEmail({
+      recipientName: partyName,
+      permitTitle: permit.title,
+      propertyAddress,
+      role,
+      addedBy: addedByName,
+    });
 
     await sendEmail({ to: partyEmail, subject, html });
   } catch (error) {
@@ -195,8 +187,8 @@ export async function triggerInspectionReminderEmails(
       return true;
     });
 
-    const promises = uniqueRecipients.map((recipient) => {
-      const { subject, html } = inspectionReminderEmail({
+    const promises = uniqueRecipients.map(async (recipient) => {
+      const { subject, html } = await inspectionReminderEmail({
         recipientName: recipient.name,
         permitTitle: permit.title,
         propertyAddress,
@@ -235,26 +227,14 @@ export async function triggerPhotoShareEmails(
 
     if (!photo) return;
 
-    const promises = recipientEmails.map((email) => {
-      const { subject, html } = {
-        subject: `${senderName} shared a photo from ${photo.permit.title}`,
-        html: `
-          <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
-            <div style="background: #2563EB; color: white; padding: 20px; border-radius: 8px 8px 0 0;">
-              <h1 style="margin: 0; font-size: 20px;">Permits on the Go</h1>
-            </div>
-            <div style="padding: 24px; border: 1px solid #E5E7EB; border-top: none; border-radius: 0 0 8px 8px;">
-              <p>Hi there,</p>
-              <p><strong>${senderName}</strong> shared a photo from the permit "${photo.permit.title}":</p>
-              ${message ? `<p style="background: #F9FAFB; padding: 12px; border-radius: 8px; font-style: italic;">"${message}"</p>` : ""}
-              <div style="text-align: center; margin: 16px 0;">
-                <img src="${photo.fileUrl}" style="max-width: 100%; border-radius: 8px;" alt="Permit photo" />
-              </div>
-              <p style="color: #6B7280; font-size: 12px;">Sent via Permits on the Go</p>
-            </div>
-          </div>
-        `,
-      };
+    const promises = recipientEmails.map(async (email) => {
+      const { subject, html } = await photoShareEmail({
+        recipientName: "there",
+        senderName,
+        permitTitle: photo.permit.title,
+        photoUrl: photo.fileUrl,
+        message,
+      });
 
       return sendEmail({ to: email, subject, html }).catch((err) =>
         console.error(`Failed to email ${email}:`, err)

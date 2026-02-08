@@ -13,6 +13,7 @@ import { logActivity, ACTIONS } from "@/lib/activity";
 import { notifyPermitParties, NOTIFICATION_TYPES } from "@/lib/notifications";
 import { triggerStatusChangeEmails } from "@/lib/email-triggers";
 import { PERMIT_STATUS_LABELS } from "@permits/shared";
+import { checkPermitAccess, forbidden } from "@/lib/rbac";
 
 export async function PATCH(
   request: NextRequest,
@@ -30,16 +31,11 @@ export async function PATCH(
       return badRequest("Status is required");
     }
 
-    const permit = await prisma.permit.findFirst({
-      where: {
-        id,
-        OR: [
-          { creatorId: user.id },
-          { parties: { some: { userId: user.id } } },
-        ],
-      },
-    });
+    const access = await checkPermitAccess(id, user.id);
+    if (!access) return forbidden("You don't have access to this permit");
+    if (!access.permissions.includes("edit")) return forbidden();
 
+    const permit = await prisma.permit.findUnique({ where: { id } });
     if (!permit) return notFound("Permit");
 
     // Validate status transition

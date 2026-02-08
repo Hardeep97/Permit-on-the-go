@@ -8,6 +8,7 @@ import {
   serverError,
 } from "@/lib/api-auth";
 import { deleteFile } from "@/lib/storage";
+import { checkPermitAccess, forbidden } from "@/lib/rbac";
 
 export async function GET(
   request: NextRequest,
@@ -24,8 +25,13 @@ export async function GET(
         uploadedBy: { select: { id: true, name: true } },
       },
     });
-
     if (!document) return notFound("Document");
+
+    // RBAC: check permit access
+    if (document.permitId) {
+      const access = await checkPermitAccess(document.permitId, user.id);
+      if (!access) return forbidden("You don't have access to this document");
+    }
 
     return success(document);
   } catch (error) {
@@ -45,6 +51,13 @@ export async function DELETE(
     const { id } = await params;
     const document = await prisma.document.findUnique({ where: { id } });
     if (!document) return notFound("Document");
+
+    // RBAC: check permit access + delete permission
+    if (document.permitId) {
+      const access = await checkPermitAccess(document.permitId, user.id);
+      if (!access) return forbidden("You don't have access to this document");
+      if (!access.permissions.includes("delete")) return forbidden();
+    }
 
     // Delete from storage
     try {

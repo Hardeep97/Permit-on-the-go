@@ -11,6 +11,7 @@ import {
 import { logActivity, ACTIONS } from "@/lib/activity";
 import { sendNotification, NOTIFICATION_TYPES } from "@/lib/notifications";
 import { triggerPartyAddedEmail } from "@/lib/email-triggers";
+import { checkPermitAccess, forbidden } from "@/lib/rbac";
 
 export async function GET(
   request: NextRequest,
@@ -21,6 +22,9 @@ export async function GET(
 
   try {
     const { id } = await params;
+    const access = await checkPermitAccess(id, user.id);
+    if (!access) return forbidden("You don't have access to this permit");
+
     const parties = await prisma.permitParty.findMany({
       where: { permitId: id },
       include: {
@@ -53,9 +57,11 @@ export async function POST(
 
     if (!role) return badRequest("Role is required");
 
-    const permit = await prisma.permit.findFirst({
-      where: { id, OR: [{ creatorId: user.id }, { parties: { some: { userId: user.id } } }] },
-    });
+    const access = await checkPermitAccess(id, user.id);
+    if (!access) return forbidden("You don't have access to this permit");
+    if (!access.permissions.includes("manage_parties")) return forbidden();
+
+    const permit = await prisma.permit.findUnique({ where: { id } });
     if (!permit) return notFound("Permit");
 
     let contactId: string | undefined;

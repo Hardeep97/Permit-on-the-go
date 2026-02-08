@@ -9,6 +9,7 @@ import {
   serverError,
 } from "@/lib/api-auth";
 import { logActivity, ACTIONS } from "@/lib/activity";
+import { checkPermitAccess, forbidden } from "@/lib/rbac";
 
 export async function PATCH(
   request: NextRequest,
@@ -19,6 +20,10 @@ export async function PATCH(
 
   try {
     const { id, milestoneId } = await params;
+    const access = await checkPermitAccess(id, user.id);
+    if (!access) return forbidden("You don't have access to this permit");
+    if (!access.permissions.includes("edit")) return forbidden();
+
     const body = await request.json();
 
     const milestone = await prisma.permitMilestone.findFirst({
@@ -71,6 +76,10 @@ export async function DELETE(
 
   try {
     const { id, milestoneId } = await params;
+    const access = await checkPermitAccess(id, user.id);
+    if (!access) return forbidden("You don't have access to this permit");
+    if (!access.permissions.includes("edit")) return forbidden();
+
     const milestone = await prisma.permitMilestone.findFirst({
       where: { id: milestoneId, permitId: id },
     });

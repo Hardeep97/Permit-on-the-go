@@ -8,6 +8,8 @@ import {
   serverError,
 } from "@/lib/api-auth";
 import { logActivity, ACTIONS } from "@/lib/activity";
+import { checkPermitAccess, forbidden } from "@/lib/rbac";
+import { triggerInspectionReminderEmails } from "@/lib/email-triggers";
 
 export async function PATCH(
   request: NextRequest,
@@ -18,6 +20,10 @@ export async function PATCH(
 
   try {
     const { id, inspectionId } = await params;
+    const access = await checkPermitAccess(id, user.id);
+    if (!access) return forbidden("You don't have access to this permit");
+    if (!access.permissions.includes("manage_inspections")) return forbidden();
+
     const body = await request.json();
 
     const inspection = await prisma.inspection.findFirst({
@@ -58,6 +64,16 @@ export async function PATCH(
       where: { id: inspectionId },
       data: updateData,
     });
+
+    // Send inspection reminder if rescheduled
+    if (body.scheduledDate && body.scheduledDate !== inspection.scheduledDate?.toISOString()) {
+      triggerInspectionReminderEmails(
+        id,
+        updated.type,
+        new Date(body.scheduledDate).toLocaleDateString(),
+        updated.inspectorName || undefined
+      ).catch(console.error);
+    }
 
     return success(updated);
   } catch (error) {

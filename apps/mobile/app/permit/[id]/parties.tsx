@@ -132,6 +132,50 @@ export default function PartiesScreen() {
     return party.user?.email || party.email || "";
   };
 
+  const handleEditRole = (party: Party) => {
+    const options = ROLES.filter((r) => r !== party.role).map((role) => ({
+      text: role,
+      onPress: async () => {
+        try {
+          await api.patch(`/permits/${id}/parties/${party.id}`, { role });
+          setParties((prev) =>
+            prev.map((p) => (p.id === party.id ? { ...p, role } : p))
+          );
+        } catch {
+          Alert.alert("Error", "Failed to update role.");
+        }
+      },
+    }));
+
+    Alert.alert(
+      "Change Role",
+      `Update ${getPartyDisplayName(party)}'s role:`,
+      [...options, { text: "Cancel", style: "cancel" as const, onPress: undefined }]
+    );
+  };
+
+  const handleDeleteParty = (party: Party) => {
+    Alert.alert(
+      "Remove Party",
+      `Remove ${getPartyDisplayName(party)} from this permit?`,
+      [
+        { text: "Cancel", style: "cancel" },
+        {
+          text: "Remove",
+          style: "destructive",
+          onPress: async () => {
+            try {
+              await api.delete(`/permits/${id}/parties/${party.id}`);
+              setParties((prev) => prev.filter((p) => p.id !== party.id));
+            } catch {
+              Alert.alert("Error", "Failed to remove party.");
+            }
+          },
+        },
+      ]
+    );
+  };
+
   const renderPartyCard = ({ item }: { item: Party }) => {
     const roleStyle = ROLE_COLORS[item.role] || ROLE_COLORS.VIEWER;
 
@@ -161,17 +205,22 @@ export default function PartiesScreen() {
               <Text className="text-sm font-semibold text-gray-900 flex-1">
                 {getPartyDisplayName(item)}
               </Text>
-              <View
-                className="rounded-full px-2.5 py-0.5"
-                style={{ backgroundColor: roleStyle.bg }}
+              <TouchableOpacity
+                onPress={() => handleEditRole(item)}
+                activeOpacity={0.7}
               >
-                <Text
-                  className="text-[10px] font-semibold"
-                  style={{ color: roleStyle.text }}
+                <View
+                  className="rounded-full px-2.5 py-0.5"
+                  style={{ backgroundColor: roleStyle.bg }}
                 >
-                  {item.role}
-                </Text>
-              </View>
+                  <Text
+                    className="text-[10px] font-semibold"
+                    style={{ color: roleStyle.text }}
+                  >
+                    {item.role}
+                  </Text>
+                </View>
+              </TouchableOpacity>
             </View>
 
             {/* Email */}
@@ -214,6 +263,26 @@ export default function PartiesScreen() {
                 <Text className="text-xs text-gray-500">{item.company}</Text>
               </View>
             ) : null}
+
+            {/* Action buttons */}
+            <View className="flex-row mt-3 pt-2 border-t border-gray-100">
+              <TouchableOpacity
+                className="flex-row items-center mr-5"
+                onPress={() => handleEditRole(item)}
+                activeOpacity={0.7}
+              >
+                <Ionicons name="pencil-outline" size={14} color="#2563EB" style={{ marginRight: 4 }} />
+                <Text className="text-xs font-medium text-blue-600">Edit Role</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                className="flex-row items-center"
+                onPress={() => handleDeleteParty(item)}
+                activeOpacity={0.7}
+              >
+                <Ionicons name="trash-outline" size={14} color="#DC2626" style={{ marginRight: 4 }} />
+                <Text className="text-xs font-medium text-red-600">Remove</Text>
+              </TouchableOpacity>
+            </View>
           </View>
         </View>
       </View>

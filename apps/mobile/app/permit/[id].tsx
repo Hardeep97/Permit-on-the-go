@@ -552,7 +552,7 @@ export default function PermitDetailScreen() {
           )}
 
           {activeTab === "photos" && (
-            <PhotoGrid photos={photos} loading={tabLoading} onUploadPress={handleAddPhoto} />
+            <PhotoGrid photos={photos} loading={tabLoading} permitId={id!} onUploadPress={handleAddPhoto} />
           )}
 
           {activeTab === "inspections" && (

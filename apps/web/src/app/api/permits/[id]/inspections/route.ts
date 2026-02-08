@@ -10,6 +10,8 @@ import {
   serverError,
 } from "@/lib/api-auth";
 import { logActivity, ACTIONS } from "@/lib/activity";
+import { checkPermitAccess, forbidden } from "@/lib/rbac";
+import { triggerInspectionReminderEmails } from "@/lib/email-triggers";
 
 export async function GET(
   request: NextRequest,
@@ -20,6 +22,9 @@ export async function GET(
 
   try {
     const { id } = await params;
+    const access = await checkPermitAccess(id, user.id);
+    if (!access) return forbidden("You don't have access to this permit");
+
     const inspections = await prisma.inspection.findMany({
       where: { permitId: id },
       orderBy: { scheduledDate: "asc" },
@@ -48,9 +53,11 @@ export async function POST(
       return badRequest(parsed.error.errors[0].message);
     }
 
-    const permit = await prisma.permit.findFirst({
-      where: { id, OR: [{ creatorId: user.id }, { parties: { some: { userId: user.id } } }] },
-    });
+    const access = await checkPermitAccess(id, user.id);
+    if (!access) return forbidden("You don't have access to this permit");
+    if (!access.permissions.includes("manage_inspections")) return forbidden();
+
+    const permit = await prisma.permit.findUnique({ where: { id } });
     if (!permit) return notFound("Permit");
 
     const inspection = await prisma.inspection.create({
@@ -70,6 +77,16 @@ export async function POST(
       description: `Scheduled ${inspection.type} inspection`,
       permitId: id,
     });
+
+    // Send inspection reminder emails
+    if (inspection.scheduledDate) {
+      triggerInspectionReminderEmails(
+        id,
+        inspection.type,
+        new Date(inspection.scheduledDate).toLocaleDateString(),
+        inspection.inspectorName || undefined
+      ).catch(console.error);
+    }
 
     return success(inspection, 201);
   } catch (error) {

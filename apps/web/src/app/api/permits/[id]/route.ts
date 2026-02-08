@@ -10,18 +10,7 @@ import {
   serverError,
 } from "@/lib/api-auth";
 import { logActivity, ACTIONS } from "@/lib/activity";
-
-async function verifyPermitAccess(permitId: string, userId: string) {
-  return prisma.permit.findFirst({
-    where: {
-      id: permitId,
-      OR: [
-        { creatorId: userId },
-        { parties: { some: { userId } } },
-      ],
-    },
-  });
-}
+import { checkPermitAccess, forbidden } from "@/lib/rbac";
 
 export async function GET(
   request: NextRequest,
@@ -32,14 +21,11 @@ export async function GET(
 
   try {
     const { id } = await params;
+    const access = await checkPermitAccess(id, user.id);
+    if (!access) return forbidden("You don't have access to this permit");
+
     const permit = await prisma.permit.findFirst({
-      where: {
-        id,
-        OR: [
-          { creatorId: user.id },
-          { parties: { some: { userId: user.id } } },
-        ],
-      },
+      where: { id },
       include: {
         property: {
           select: {
@@ -91,7 +77,11 @@ export async function PATCH(
 
   try {
     const { id } = await params;
-    const existing = await verifyPermitAccess(id, user.id);
+    const access = await checkPermitAccess(id, user.id);
+    if (!access) return forbidden("You don't have access to this permit");
+    if (!access.permissions.includes("edit")) return forbidden();
+
+    const existing = await prisma.permit.findUnique({ where: { id } });
     if (!existing) return notFound("Permit");
 
     const body = await request.json();
@@ -179,9 +169,11 @@ export async function DELETE(
 
   try {
     const { id } = await params;
-    const existing = await prisma.permit.findFirst({
-      where: { id, creatorId: user.id },
-    });
+    const access = await checkPermitAccess(id, user.id);
+    if (!access) return forbidden("You don't have access to this permit");
+    if (!access.permissions.includes("delete")) return forbidden();
+
+    const existing = await prisma.permit.findUnique({ where: { id } });
     if (!existing) return notFound("Permit");
 
     if (!["DRAFT", "DENIED", "CLOSED", "EXPIRED"].includes(existing.status)) {

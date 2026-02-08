@@ -10,6 +10,7 @@ import {
 } from "@/lib/api-auth";
 import { logActivity, ACTIONS } from "@/lib/activity";
 import { uploadFile } from "@/lib/storage";
+import { checkPermitAccess, forbidden } from "@/lib/rbac";
 
 export async function GET(
   request: NextRequest,
@@ -20,6 +21,9 @@ export async function GET(
 
   try {
     const { id } = await params;
+    const access = await checkPermitAccess(id, user.id);
+    if (!access) return forbidden("You don't have access to this permit");
+
     const { searchParams } = new URL(request.url);
     const stage = searchParams.get("stage");
 
@@ -52,9 +56,11 @@ export async function POST(
   try {
     const { id } = await params;
 
-    const permit = await prisma.permit.findFirst({
-      where: { id, OR: [{ creatorId: user.id }, { parties: { some: { userId: user.id } } }] },
-    });
+    const access = await checkPermitAccess(id, user.id);
+    if (!access) return forbidden("You don't have access to this permit");
+    if (!access.permissions.includes("upload_documents")) return forbidden();
+
+    const permit = await prisma.permit.findUnique({ where: { id } });
     if (!permit) return notFound("Permit");
 
     const formData = await request.formData();
