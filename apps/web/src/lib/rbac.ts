@@ -2,14 +2,14 @@ import { prisma } from "@permits/database";
 
 export type PermitRole = "OWNER" | "EXPEDITOR" | "CONTRACTOR" | "ARCHITECT" | "ENGINEER" | "INSPECTOR" | "VIEWER";
 
-export type PermitPermission = "read" | "edit" | "delete" | "manage_parties" | "upload_documents" | "manage_inspections" | "send_messages";
+export type PermitPermission = "read" | "edit" | "delete" | "manage_parties" | "upload_documents" | "manage_inspections" | "send_messages" | "assign_tasks" | "complete_tasks";
 
 const ROLE_PERMISSIONS: Record<PermitRole, PermitPermission[]> = {
-  OWNER: ["read", "edit", "delete", "manage_parties", "upload_documents", "manage_inspections", "send_messages"],
-  EXPEDITOR: ["read", "edit", "manage_parties", "upload_documents", "manage_inspections", "send_messages"],
-  CONTRACTOR: ["read", "upload_documents", "send_messages"],
-  ARCHITECT: ["read", "upload_documents", "send_messages"],
-  ENGINEER: ["read", "upload_documents", "send_messages"],
+  OWNER: ["read", "edit", "delete", "manage_parties", "upload_documents", "manage_inspections", "send_messages", "assign_tasks", "complete_tasks"],
+  EXPEDITOR: ["read", "edit", "manage_parties", "upload_documents", "manage_inspections", "send_messages", "assign_tasks", "complete_tasks"],
+  CONTRACTOR: ["read", "upload_documents", "send_messages", "complete_tasks"],
+  ARCHITECT: ["read", "upload_documents", "send_messages", "complete_tasks"],
+  ENGINEER: ["read", "upload_documents", "send_messages", "complete_tasks"],
   INSPECTOR: ["read", "manage_inspections", "send_messages"],
   VIEWER: ["read"],
 };

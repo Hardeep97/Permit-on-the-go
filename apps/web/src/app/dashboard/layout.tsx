@@ -16,6 +16,7 @@ import {
   Check,
   X,
   Store,
+  CheckSquare,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
@@ -23,6 +24,7 @@ const sidebarLinks = [
   { href: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
   { href: "/dashboard/properties", label: "Properties", icon: Building2 },
   { href: "/dashboard/permits", label: "Permits", icon: ClipboardCheck },
+  { href: "/dashboard/tasks", label: "My Tasks", icon: CheckSquare },
   { href: "/dashboard/vendors", label: "Vendors", icon: Users },
   { href: "/dashboard/vendor-portal", label: "Vendor Portal", icon: Store },
   { href: "/dashboard/chat", label: "AI Chat", icon: MessageSquare },

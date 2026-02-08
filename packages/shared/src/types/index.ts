@@ -27,6 +27,13 @@ export type {
   CreateVendorReviewInput,
   VendorSearchInput,
 } from "../validators/vendor";
+export type {
+  CreateTaskInput,
+  UpdateTaskInput,
+  CreateChecklistItemInput,
+  UpdateChecklistItemInput,
+  CreateWorkflowTemplateInput,
+} from "../validators/task";
 
 // API response types
 export interface ApiResponse<T = unknown> {
@@ -214,4 +221,48 @@ export interface VendorTransaction {
   status: string;
   description?: string;
   createdAt: string;
+}
+
+export interface Task {
+  id: string;
+  title: string;
+  description?: string;
+  status: string;
+  priority: string;
+  dueDate?: string;
+  completedAt?: string;
+  sortOrder: number;
+  createdAt: string;
+  assigneeId?: string;
+  assignee?: { id: string; name: string; avatarUrl?: string };
+  creatorId: string;
+  creator?: { id: string; name: string };
+  permitId?: string;
+  permit?: { id: string; title: string; property?: { name: string } };
+  checklistItems?: TaskChecklistItem[];
+}
+
+export interface TaskChecklistItem {
+  id: string;
+  title: string;
+  isCompleted: boolean;
+  sortOrder: number;
+}
+
+export interface WorkflowTemplate {
+  id: string;
+  name: string;
+  description?: string;
+  permitType?: string;
+  steps: WorkflowStep[];
+  isDefault: boolean;
+  createdAt: string;
+}
+
+export interface WorkflowStep {
+  title: string;
+  description?: string;
+  priority: string;
+  estimatedDays?: number;
+  sortOrder: number;
 }

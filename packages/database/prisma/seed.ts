@@ -894,6 +894,89 @@ Click "Ask AI" on any property page to start a property-specific conversation.
 
   console.log(`Created ${knowledgeDocuments.length} knowledge base documents with chunks`);
 
+  // ============================================================
+  // WORKFLOW TEMPLATES — Task Workflows for Common Permit Types
+  // ============================================================
+
+  const workflowTemplates = [
+    {
+      name: "New Construction Workflow",
+      description: "Complete workflow for new construction projects from plans to Certificate of Occupancy",
+      permitType: "",
+      isDefault: false,
+      steps: [
+        { title: "Review architectural plans", description: "Review and verify all architectural plans and drawings are complete", priority: "NORMAL", estimatedDays: 3, sortOrder: 1 },
+        { title: "Prepare permit application package", description: "Compile all required forms, documents, and supporting materials", priority: "NORMAL", estimatedDays: 2, sortOrder: 2 },
+        { title: "Submit application to municipality", description: "Submit complete permit application package to local construction office", priority: "HIGH", estimatedDays: 1, sortOrder: 3 },
+        { title: "Await plan review and approval", description: "Municipality reviews submitted plans for code compliance", priority: "NORMAL", estimatedDays: 14, sortOrder: 4 },
+        { title: "Address review comments if any", description: "Make required revisions based on plan review feedback", priority: "NORMAL", estimatedDays: 5, sortOrder: 5 },
+        { title: "Receive permit approval", description: "Obtain approved permit and posted notice", priority: "NORMAL", estimatedDays: 3, sortOrder: 6 },
+        { title: "Schedule foundation inspection", description: "Request inspection before pouring concrete", priority: "HIGH", estimatedDays: 2, sortOrder: 7 },
+        { title: "Schedule framing inspection", description: "Request inspection after framing is complete", priority: "NORMAL", estimatedDays: 5, sortOrder: 8 },
+        { title: "Schedule rough electrical inspection", description: "Request inspection before covering electrical work", priority: "NORMAL", estimatedDays: 3, sortOrder: 9 },
+        { title: "Schedule rough plumbing inspection", description: "Request inspection before covering plumbing work", priority: "NORMAL", estimatedDays: 3, sortOrder: 10 },
+        { title: "Schedule HVAC inspection", description: "Request inspection of HVAC system installation", priority: "NORMAL", estimatedDays: 3, sortOrder: 11 },
+        { title: "Schedule insulation inspection", description: "Request inspection before installing drywall", priority: "NORMAL", estimatedDays: 2, sortOrder: 12 },
+        { title: "Schedule final inspection", description: "Request final inspection after all work is complete", priority: "HIGH", estimatedDays: 5, sortOrder: 13 },
+        { title: "Obtain Certificate of Occupancy", description: "Receive CO or CA from municipality", priority: "URGENT", estimatedDays: 3, sortOrder: 14 },
+      ],
+    },
+    {
+      name: "Renovation Workflow",
+      description: "Workflow for renovation and alteration projects",
+      permitType: "RENOVATION",
+      isDefault: false,
+      steps: [
+        { title: "Document existing conditions", description: "Photo documentation and assessment of current conditions", priority: "NORMAL", estimatedDays: 2, sortOrder: 1 },
+        { title: "Prepare renovation plans", description: "Create detailed plans showing scope of renovation work", priority: "NORMAL", estimatedDays: 5, sortOrder: 2 },
+        { title: "Submit permit application", description: "Submit completed application with plans to municipality", priority: "HIGH", estimatedDays: 1, sortOrder: 3 },
+        { title: "Await approval", description: "Wait for plan review and permit approval", priority: "NORMAL", estimatedDays: 10, sortOrder: 4 },
+        { title: "Demolition phase (if applicable)", description: "Complete any required demolition work", priority: "NORMAL", estimatedDays: 5, sortOrder: 5 },
+        { title: "Construction phase", description: "Execute renovation work per approved plans", priority: "NORMAL", estimatedDays: 14, sortOrder: 6 },
+        { title: "Schedule inspections", description: "Request required inspections at appropriate stages", priority: "HIGH", estimatedDays: 2, sortOrder: 7 },
+        { title: "Final inspection", description: "Pass final inspection for all work completed", priority: "HIGH", estimatedDays: 3, sortOrder: 8 },
+        { title: "Close out permit", description: "Obtain final sign-off and close permit", priority: "NORMAL", estimatedDays: 2, sortOrder: 9 },
+      ],
+    },
+    {
+      name: "Simple Permit Workflow",
+      description: "Streamlined workflow for straightforward permit applications",
+      permitType: "",
+      isDefault: true,
+      steps: [
+        { title: "Gather required documents", description: "Collect all necessary plans, licenses, and supporting documents", priority: "NORMAL", estimatedDays: 3, sortOrder: 1 },
+        { title: "Complete permit application", description: "Fill out all required subcode application forms", priority: "NORMAL", estimatedDays: 2, sortOrder: 2 },
+        { title: "Submit to local authority", description: "Submit application package to construction office", priority: "HIGH", estimatedDays: 1, sortOrder: 3 },
+        { title: "Await review", description: "Wait for plan review by subcode officials", priority: "NORMAL", estimatedDays: 7, sortOrder: 4 },
+        { title: "Address corrections if required", description: "Make any requested changes or provide additional information", priority: "NORMAL", estimatedDays: 3, sortOrder: 5 },
+        { title: "Receive approval", description: "Obtain approved permit and posted notice", priority: "NORMAL", estimatedDays: 2, sortOrder: 6 },
+        { title: "Schedule inspection", description: "Request required inspection at appropriate time", priority: "HIGH", estimatedDays: 2, sortOrder: 7 },
+        { title: "Pass inspection", description: "Complete work and pass required inspection", priority: "HIGH", estimatedDays: 1, sortOrder: 8 },
+        { title: "Close permit", description: "Receive final approval and close permit", priority: "NORMAL", estimatedDays: 1, sortOrder: 9 },
+      ],
+    },
+  ];
+
+  for (const template of workflowTemplates) {
+    await prisma.workflowTemplate.upsert({
+      where: { id: `seed-workflow-${template.name.toLowerCase().replace(/\s+/g, "-")}` },
+      update: {
+        description: template.description,
+        steps: template.steps,
+      },
+      create: {
+        id: `seed-workflow-${template.name.toLowerCase().replace(/\s+/g, "-")}`,
+        name: template.name,
+        description: template.description,
+        permitType: template.permitType,
+        steps: template.steps,
+        isDefault: template.isDefault,
+      },
+    });
+  }
+
+  console.log(`Created ${workflowTemplates.length} workflow templates`);
+
   console.log("\n--- Seed Complete ---");
   console.log("Login with: demo@permitsonthego.com / Password123");
 }
