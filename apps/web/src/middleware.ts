@@ -11,9 +11,31 @@ export function middleware(request: NextRequest) {
     return NextResponse.next();
   }
 
-  // Allow all API routes (they handle their own auth via getAuthenticatedUser)
+  // Handle CORS for API routes (mobile app on different port)
   if (pathname.startsWith("/api")) {
-    return NextResponse.next();
+    const origin = request.headers.get("origin") || "";
+    const allowedOrigins = ["http://localhost:8081", "http://localhost:8082", "http://localhost:19006"];
+    const isAllowed = allowedOrigins.includes(origin) || origin.startsWith("http://192.168.");
+
+    if (request.method === "OPTIONS") {
+      return new NextResponse(null, {
+        status: 204,
+        headers: {
+          "Access-Control-Allow-Origin": isAllowed ? origin : "",
+          "Access-Control-Allow-Methods": "GET, POST, PUT, PATCH, DELETE, OPTIONS",
+          "Access-Control-Allow-Headers": "Content-Type, Authorization",
+          "Access-Control-Max-Age": "86400",
+        },
+      });
+    }
+
+    const response = NextResponse.next();
+    if (isAllowed) {
+      response.headers.set("Access-Control-Allow-Origin", origin);
+      response.headers.set("Access-Control-Allow-Methods", "GET, POST, PUT, PATCH, DELETE, OPTIONS");
+      response.headers.set("Access-Control-Allow-Headers", "Content-Type, Authorization");
+    }
+    return response;
   }
 
   // Allow static files and Next.js internals

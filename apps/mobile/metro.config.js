@@ -1,4 +1,5 @@
 const { getDefaultConfig } = require("expo/metro-config");
+const { withNativeWind } = require("nativewind/metro");
 const path = require("path");
 
 const projectRoot = __dirname;
@@ -20,19 +21,11 @@ config.resolver.nodeModulesPaths = [
 config.resolver.resolverMainFields = ["react-native", "browser", "main"];
 
 // 4. Enable package exports condition names for react-native
-config.resolver.unstable_conditionNames = ["react-native", "browser", "require", "import"];
+config.resolver.unstable_conditionNames = ["react-native", "browser", "require", "default", "import"];
 
-// 5. Force single React instance by redirecting all React-related requires
-// to the mobile app's node_modules (React 18.3.1)
-const mobileNodeModules = path.resolve(projectRoot, "node_modules");
+// 5. Force axios to use the browser build instead of the Node.js build
 const rootNodeModules = path.resolve(monorepoRoot, "node_modules");
 const forcedModules = {
-  react: path.resolve(mobileNodeModules, "react/index.js"),
-  "react/jsx-runtime": path.resolve(mobileNodeModules, "react/jsx-runtime.js"),
-  "react/jsx-dev-runtime": path.resolve(mobileNodeModules, "react/jsx-dev-runtime.js"),
-  "react-dom": path.resolve(mobileNodeModules, "react-dom/index.js"),
-  "react-native": path.resolve(rootNodeModules, "react-native/index.js"),
-  // Force axios to use the browser build instead of Node.js build
   axios: path.resolve(rootNodeModules, "axios/dist/browser/axios.cjs"),
 };
 
@@ -44,10 +37,26 @@ config.resolver.resolveRequest = (context, moduleName, platform) => {
       type: "sourceFile",
     };
   }
+
+  // Force @babel/runtime helpers to use CJS (not ESM) to avoid
+  // "is not a function" errors on web where Metro picks ESM via exports map
+  if (moduleName.startsWith("@babel/runtime/helpers/") && !moduleName.includes("/esm/")) {
+    const helperName = moduleName.replace("@babel/runtime/helpers/", "");
+    const cjsPath = path.resolve(rootNodeModules, "@babel/runtime/helpers", helperName + ".js");
+    return {
+      filePath: cjsPath,
+      type: "sourceFile",
+    };
+  }
+
   if (originalResolveRequest) {
     return originalResolveRequest(context, moduleName, platform);
   }
   return context.resolveRequest(context, moduleName, platform);
 };
 
-module.exports = config;
+module.exports = withNativeWind(config, {
+  input: "./global.css",
+  configPath: path.resolve(projectRoot, "tailwind.config.js"),
+  projectRoot,
+});

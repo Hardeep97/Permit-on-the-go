@@ -12,23 +12,26 @@ import {
 } from "react-native";
 import { Link, router } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
+import { useAuthStore } from "@/stores/auth";
 
 export default function LoginScreen() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
+  const login = useAuthStore((s) => s.login);
 
   const handleLogin = async () => {
     if (!email || !password) return;
 
     setIsLoading(true);
     try {
-      // TODO: Integrate with auth store and API
-      await new Promise((resolve) => setTimeout(resolve, 1000));
+      await login(email, password);
       router.replace("/(tabs)");
-    } catch (error) {
-      console.error("Login failed:", error);
+    } catch (error: any) {
+      const message =
+        error?.response?.data?.error || "Login failed. Please check your credentials.";
+      Alert.alert("Login Failed", message);
     } finally {
       setIsLoading(false);
     }

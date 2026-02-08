@@ -1,6 +1,6 @@
 import axios, { AxiosError, InternalAxiosRequestConfig } from "axios";
-import * as SecureStore from "expo-secure-store";
 import Constants from "expo-constants";
+import { getItem, setItem, deleteItem } from "./storage";
 
 const API_BASE_URL =
   Constants.expoConfig?.extra?.apiUrl || "http://localhost:3000/api";
@@ -19,7 +19,7 @@ const api = axios.create({
 api.interceptors.request.use(
   async (config: InternalAxiosRequestConfig) => {
     try {
-      const token = await SecureStore.getItemAsync(TOKEN_KEY);
+      const token = await getItem(TOKEN_KEY);
       if (token && config.headers) {
         config.headers.Authorization = `Bearer ${token}`;
       }
@@ -42,7 +42,7 @@ api.interceptors.response.use(
     if (status === 401) {
       // Token expired or invalid -- clear stored token
       try {
-        await SecureStore.deleteItemAsync(TOKEN_KEY);
+        await deleteItem(TOKEN_KEY);
       } catch (e) {
         console.warn("Failed to clear auth token:", e);
       }
@@ -67,15 +67,15 @@ api.interceptors.response.use(
 
 // Helper to store/retrieve the auth token
 export const setAuthToken = async (token: string) => {
-  await SecureStore.setItemAsync(TOKEN_KEY, token);
+  await setItem(TOKEN_KEY, token);
 };
 
 export const getAuthToken = async (): Promise<string | null> => {
-  return await SecureStore.getItemAsync(TOKEN_KEY);
+  return await getItem(TOKEN_KEY);
 };
 
 export const clearAuthToken = async () => {
-  await SecureStore.deleteItemAsync(TOKEN_KEY);
+  await deleteItem(TOKEN_KEY);
 };
 
 export default api;

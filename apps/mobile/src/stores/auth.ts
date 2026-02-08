@@ -1,8 +1,8 @@
 import { create } from "zustand";
-import * as SecureStore from "expo-secure-store";
 import * as Notifications from "expo-notifications";
 import { Platform } from "react-native";
 import api, { setAuthToken, clearAuthToken } from "@/services/api";
+import { getItem, setItem, deleteItem } from "@/services/storage";
 
 const TOKEN_KEY = "auth_token";
 const USER_KEY = "auth_user";
@@ -32,6 +32,7 @@ interface AuthState {
 }
 
 async function registerPushToken(): Promise<string | null> {
+  if (Platform.OS === "web") return null;
   try {
     const { status: existingStatus } =
       await Notifications.getPermissionsAsync();
@@ -57,7 +58,7 @@ async function registerPushToken(): Promise<string | null> {
     });
 
     // Persist the push token locally
-    await SecureStore.setItemAsync(PUSH_TOKEN_KEY, pushToken);
+    await setItem(PUSH_TOKEN_KEY, pushToken);
 
     return pushToken;
   } catch (error) {
@@ -72,7 +73,7 @@ async function unregisterPushToken(pushToken: string | null): Promise<void> {
   if (!pushToken) return;
   try {
     await api.delete("/push-tokens", { data: { token: pushToken } });
-    await SecureStore.deleteItemAsync(PUSH_TOKEN_KEY);
+    await deleteItem(PUSH_TOKEN_KEY);
   } catch (error) {
     console.warn("Failed to unregister push token:", error);
   }
@@ -92,7 +93,7 @@ export const useAuthStore = create<AuthState>((set, get) => ({
       const { user, accessToken: token } = response.data.data;
 
       await setAuthToken(token);
-      await SecureStore.setItemAsync(USER_KEY, JSON.stringify(user));
+      await setItem(USER_KEY, JSON.stringify(user));
 
       set({
         user,
@@ -120,7 +121,7 @@ export const useAuthStore = create<AuthState>((set, get) => ({
       // Unregister push token before clearing auth
       await unregisterPushToken(pushToken);
       await clearAuthToken();
-      await SecureStore.deleteItemAsync(USER_KEY);
+      await deleteItem(USER_KEY);
     } catch (error) {
       console.warn("Error clearing auth data:", error);
     } finally {
@@ -136,7 +137,7 @@ export const useAuthStore = create<AuthState>((set, get) => ({
 
   setUser: (user: User) => {
     set({ user });
-    SecureStore.setItemAsync(USER_KEY, JSON.stringify(user)).catch((e) =>
+    setItem(USER_KEY, JSON.stringify(user)).catch((e) =>
       console.warn("Failed to persist user:", e)
     );
   },
@@ -144,9 +145,9 @@ export const useAuthStore = create<AuthState>((set, get) => ({
   loadToken: async () => {
     set({ isLoading: true });
     try {
-      const token = await SecureStore.getItemAsync(TOKEN_KEY);
-      const userJson = await SecureStore.getItemAsync(USER_KEY);
-      const pushToken = await SecureStore.getItemAsync(PUSH_TOKEN_KEY);
+      const token = await getItem(TOKEN_KEY);
+      const userJson = await getItem(USER_KEY);
+      const pushToken = await getItem(PUSH_TOKEN_KEY);
 
       if (token && userJson) {
         const user = JSON.parse(userJson) as User;
@@ -192,7 +193,7 @@ export const useAuthStore = create<AuthState>((set, get) => ({
       const { user, accessToken: token } = loginResponse.data.data;
 
       await setAuthToken(token);
-      await SecureStore.setItemAsync(USER_KEY, JSON.stringify(user));
+      await setItem(USER_KEY, JSON.stringify(user));
 
       set({
         user,

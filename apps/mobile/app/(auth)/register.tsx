@@ -11,6 +11,8 @@ import {
 } from "react-native";
 import { Link, router } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
+import { Alert } from "react-native";
+import { useAuthStore } from "@/stores/auth";
 
 export default function RegisterScreen() {
   const [fullName, setFullName] = useState("");
@@ -19,6 +21,7 @@ export default function RegisterScreen() {
   const [confirmPassword, setConfirmPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
+  const register = useAuthStore((s) => s.register);
 
   const isFormValid =
     fullName && email && password && confirmPassword && password === confirmPassword;
@@ -28,11 +31,12 @@ export default function RegisterScreen() {
 
     setIsLoading(true);
     try {
-      // TODO: Integrate with auth store and API
-      await new Promise((resolve) => setTimeout(resolve, 1000));
+      await register(fullName, email, password);
       router.replace("/(tabs)");
-    } catch (error) {
-      console.error("Registration failed:", error);
+    } catch (error: any) {
+      const message =
+        error?.response?.data?.error || "Registration failed. Please try again.";
+      Alert.alert("Registration Failed", message);
     } finally {
       setIsLoading(false);
     }
