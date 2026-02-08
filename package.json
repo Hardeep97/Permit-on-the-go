@@ -26,5 +26,8 @@
   "overrides": {
     "react": "^19.0.0",
     "react-dom": "^19.0.0"
+  },
+  "dependencies": {
+    "react-native-worklets": "^0.7.2"
   }
 }
