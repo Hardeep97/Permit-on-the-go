@@ -3,7 +3,7 @@ import * as SecureStore from "expo-secure-store";
 import Constants from "expo-constants";
 
 const API_BASE_URL =
-  Constants.expoConfig?.extra?.apiUrl || "http://localhost:3001/api";
+  Constants.expoConfig?.extra?.apiUrl || "http://localhost:3000/api";
 
 const TOKEN_KEY = "auth_token";
 

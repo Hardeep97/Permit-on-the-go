@@ -88,8 +88,8 @@ export const useAuthStore = create<AuthState>((set, get) => ({
   login: async (email: string, password: string) => {
     set({ isLoading: true });
     try {
-      const response = await api.post("/auth/login", { email, password });
-      const { user, token } = response.data;
+      const response = await api.post("/auth/mobile-token", { email, password });
+      const { user, accessToken: token } = response.data.data;
 
       await setAuthToken(token);
       await SecureStore.setItemAsync(USER_KEY, JSON.stringify(user));
@@ -181,12 +181,15 @@ export const useAuthStore = create<AuthState>((set, get) => ({
   register: async (name: string, email: string, password: string) => {
     set({ isLoading: true });
     try {
-      const response = await api.post("/auth/register", {
-        name,
+      // Create the account
+      await api.post("/auth/register", { name, email, password });
+
+      // Auto-login to get JWT tokens
+      const loginResponse = await api.post("/auth/mobile-token", {
         email,
         password,
       });
-      const { user, token } = response.data;
+      const { user, accessToken: token } = loginResponse.data.data;
 
       await setAuthToken(token);
       await SecureStore.setItemAsync(USER_KEY, JSON.stringify(user));

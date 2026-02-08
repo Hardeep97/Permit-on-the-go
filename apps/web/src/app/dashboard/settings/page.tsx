@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { User, Bell, Shield, CreditCard, Loader2 } from "lucide-react";
+import { User, Bell, Shield, CreditCard, Loader2, ExternalLink } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 
@@ -12,8 +12,13 @@ interface UserProfile {
   phone: string | null;
   company: string | null;
   avatarUrl: string | null;
-  role: string;
   createdAt: string;
+  subscription?: {
+    plan: string;
+    status: string;
+    aiCreditsRemaining: number;
+    currentPeriodEnd: string | null;
+  };
 }
 
 export default function SettingsPage() {
@@ -23,9 +28,28 @@ export default function SettingsPage() {
   const [message, setMessage] = useState("");
   const [activeTab, setActiveTab] = useState("profile");
 
+  // Profile fields
   const [name, setName] = useState("");
   const [phone, setPhone] = useState("");
   const [company, setCompany] = useState("");
+
+  // Password fields
+  const [currentPassword, setCurrentPassword] = useState("");
+  const [newPassword, setNewPassword] = useState("");
+  const [confirmPassword, setConfirmPassword] = useState("");
+  const [passwordSaving, setPasswordSaving] = useState(false);
+  const [passwordMessage, setPasswordMessage] = useState("");
+
+  // Billing
+  const [billingLoading, setBillingLoading] = useState(false);
+
+  // Notification preferences (local state; could be persisted to API later)
+  const [notifPrefs, setNotifPrefs] = useState({
+    permitUpdates: true,
+    inspectionReminders: true,
+    taskAssignments: true,
+    documentUploads: true,
+  });
 
   useEffect(() => {
     fetchProfile();
@@ -68,6 +92,59 @@ export default function SettingsPage() {
       setMessage("An error occurred.");
     } finally {
       setSaving(false);
+    }
+  };
+
+  const handlePasswordChange = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setPasswordMessage("");
+
+    if (newPassword !== confirmPassword) {
+      setPasswordMessage("New passwords do not match.");
+      return;
+    }
+
+    setPasswordSaving(true);
+    try {
+      const res = await fetch("/api/auth/change-password", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ currentPassword, newPassword }),
+      });
+
+      const data = await res.json();
+
+      if (res.ok) {
+        setPasswordMessage("Password updated successfully.");
+        setCurrentPassword("");
+        setNewPassword("");
+        setConfirmPassword("");
+      } else {
+        setPasswordMessage(data.error || "Failed to update password.");
+      }
+    } catch {
+      setPasswordMessage("An error occurred.");
+    } finally {
+      setPasswordSaving(false);
+    }
+  };
+
+  const handleManageBilling = async () => {
+    setBillingLoading(true);
+    try {
+      const res = await fetch("/api/subscriptions/portal", {
+        method: "POST",
+      });
+      if (res.ok) {
+        const data = await res.json();
+        if (data.data?.url) {
+          window.location.href = data.data.url;
+          return;
+        }
+      }
+      setBillingLoading(false);
+    } catch {
+      setBillingLoading(false);
     }
   };
 
@@ -187,7 +264,7 @@ export default function SettingsPage() {
                 Member since{" "}
                 {profile?.createdAt
                   ? new Date(profile.createdAt).toLocaleDateString()
-                  : "—"}
+                  : "\u2014"}
               </span>
             </div>
           </div>
@@ -203,25 +280,29 @@ export default function SettingsPage() {
           <div className="space-y-4">
             {[
               {
+                key: "permitUpdates" as const,
                 label: "Permit status updates",
                 description: "Get notified when permit statuses change",
               },
               {
+                key: "inspectionReminders" as const,
                 label: "Inspection reminders",
                 description: "Reminders about upcoming inspections",
               },
               {
+                key: "taskAssignments" as const,
                 label: "Task assignments",
                 description: "When tasks are assigned to you",
               },
               {
+                key: "documentUploads" as const,
                 label: "Document uploads",
                 description: "When new documents are uploaded to your permits",
               },
             ].map((pref) => (
               <label
-                key={pref.label}
-                className="flex items-center justify-between rounded-lg border border-neutral-100 p-4 hover:bg-neutral-50"
+                key={pref.key}
+                className="flex items-center justify-between rounded-lg border border-neutral-100 p-4 hover:bg-neutral-50 cursor-pointer"
               >
                 <div>
                   <p className="font-medium text-neutral-900">{pref.label}</p>
@@ -229,7 +310,13 @@ export default function SettingsPage() {
                 </div>
                 <input
                   type="checkbox"
-                  defaultChecked
+                  checked={notifPrefs[pref.key]}
+                  onChange={(e) =>
+                    setNotifPrefs((prev) => ({
+                      ...prev,
+                      [pref.key]: e.target.checked,
+                    }))
+                  }
                   className="h-4 w-4 rounded border-neutral-300 text-primary-600"
                 />
               </label>
@@ -249,24 +336,63 @@ export default function SettingsPage() {
               <h3 className="mb-2 font-medium text-neutral-900">
                 Change Password
               </h3>
-              <div className="space-y-3">
-                <Input type="password" placeholder="Current password" />
-                <Input type="password" placeholder="New password" />
-                <Input type="password" placeholder="Confirm new password" />
-                <Button variant="outline">Update Password</Button>
-              </div>
-            </div>
-            <hr className="border-neutral-200" />
-            <div>
-              <h3 className="mb-1 font-medium text-neutral-900">
-                Active Sessions
-              </h3>
-              <p className="mb-3 text-sm text-neutral-500">
-                You are currently logged in on this device.
-              </p>
-              <Button variant="outline" className="text-red-600 hover:text-red-700">
-                Sign Out All Other Sessions
-              </Button>
+              <form onSubmit={handlePasswordChange} className="space-y-3">
+                <Input
+                  type="password"
+                  placeholder="Current password"
+                  value={currentPassword}
+                  onChange={(e) => setCurrentPassword(e.target.value)}
+                  required
+                  autoComplete="current-password"
+                />
+                <Input
+                  type="password"
+                  placeholder="New password"
+                  value={newPassword}
+                  onChange={(e) => setNewPassword(e.target.value)}
+                  required
+                  minLength={8}
+                  autoComplete="new-password"
+                />
+                <Input
+                  type="password"
+                  placeholder="Confirm new password"
+                  value={confirmPassword}
+                  onChange={(e) => setConfirmPassword(e.target.value)}
+                  required
+                  minLength={8}
+                  autoComplete="new-password"
+                />
+                <p className="text-xs text-neutral-500">
+                  Must be at least 8 characters with one uppercase letter and
+                  one number
+                </p>
+                {passwordMessage && (
+                  <p
+                    className={`text-sm ${
+                      passwordMessage.includes("success")
+                        ? "text-green-600"
+                        : "text-red-600"
+                    }`}
+                  >
+                    {passwordMessage}
+                  </p>
+                )}
+                <Button
+                  type="submit"
+                  variant="outline"
+                  disabled={passwordSaving}
+                >
+                  {passwordSaving ? (
+                    <>
+                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                      Updating...
+                    </>
+                  ) : (
+                    "Update Password"
+                  )}
+                </Button>
+              </form>
             </div>
           </div>
         </div>
@@ -284,19 +410,69 @@ export default function SettingsPage() {
                 <div>
                   <p className="font-medium text-neutral-900">Current Plan</p>
                   <p className="text-sm text-neutral-500">
-                    {profile?.role === "ADMIN" ? "Admin Account" : "Standard Plan"}
+                    {profile?.subscription?.plan === "ANNUAL"
+                      ? "Annual Plan ($250/year)"
+                      : profile?.subscription?.plan === "ENTERPRISE"
+                        ? "Enterprise Plan"
+                        : "Free Plan"}
                   </p>
                 </div>
-                <span className="rounded-full bg-green-100 px-3 py-1 text-sm font-medium text-green-700">
-                  Active
+                <span
+                  className={`rounded-full px-3 py-1 text-sm font-medium ${
+                    profile?.subscription?.status === "ACTIVE"
+                      ? "bg-green-100 text-green-700"
+                      : "bg-neutral-100 text-neutral-600"
+                  }`}
+                >
+                  {profile?.subscription?.status || "Free"}
                 </span>
               </div>
             </div>
+
+            {profile?.subscription && (
+              <div className="grid grid-cols-2 gap-4">
+                <div className="rounded-lg border border-neutral-100 p-4">
+                  <p className="text-sm text-neutral-500">AI Credits</p>
+                  <p className="mt-1 text-2xl font-bold text-neutral-900">
+                    {profile.subscription.aiCreditsRemaining}
+                  </p>
+                  <p className="text-xs text-neutral-400">remaining</p>
+                </div>
+                {profile.subscription.currentPeriodEnd && (
+                  <div className="rounded-lg border border-neutral-100 p-4">
+                    <p className="text-sm text-neutral-500">Next Billing</p>
+                    <p className="mt-1 text-lg font-bold text-neutral-900">
+                      {new Date(
+                        profile.subscription.currentPeriodEnd
+                      ).toLocaleDateString()}
+                    </p>
+                  </div>
+                )}
+              </div>
+            )}
+
             <p className="text-sm text-neutral-500">
-              Annual subscription: $250/year. Manage your subscription and
-              payment methods through Stripe.
+              Annual subscription: $250/year. Manage your subscription, payment
+              methods, and invoices through Stripe.
             </p>
-            <Button variant="outline">Manage Subscription</Button>
+
+            <Button
+              variant="outline"
+              onClick={handleManageBilling}
+              disabled={billingLoading}
+            >
+              {billingLoading ? (
+                <>
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  Redirecting...
+                </>
+              ) : (
+                <>
+                  <ExternalLink className="mr-2 h-4 w-4" />
+                  Manage Subscription
+                </>
+              )}
+            </Button>
           </div>
         </div>
       )}

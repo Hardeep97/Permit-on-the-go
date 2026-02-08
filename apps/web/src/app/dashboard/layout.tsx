@@ -125,7 +125,7 @@ function NotificationDropdown() {
       });
       if (res.ok) {
         setNotifications((prev) =>
-          prev.map((n) => ({ ...n, read: true }))
+          prev.map((n) => ({ ...n, readAt: new Date().toISOString() }))
         );
       }
     } catch {
@@ -144,7 +144,9 @@ function NotificationDropdown() {
         });
         setNotifications((prev) =>
           prev.map((n) =>
-            n.id === notification.id ? { ...n, read: true } : n
+            n.id === notification.id
+              ? { ...n, readAt: new Date().toISOString() }
+              : n
           )
         );
       } catch {

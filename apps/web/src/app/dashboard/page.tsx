@@ -78,17 +78,20 @@ export default function DashboardPage() {
   const [propertyCount, setPropertyCount] = useState(0);
   const [permitCount, setPermitCount] = useState(0);
   const [pendingInspections, setPendingInspections] = useState(0);
+  const [tasksDue, setTasksDue] = useState(0);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     async function fetchData() {
       setLoading(true);
       try {
-        const [userRes, propertiesRes, permitsRes] = await Promise.all([
-          fetch("/api/users/me"),
-          fetch("/api/properties?pageSize=1"),
-          fetch("/api/permits?pageSize=5"),
-        ]);
+        const [userRes, propertiesRes, permitsRes, tasksRes] =
+          await Promise.all([
+            fetch("/api/users/me"),
+            fetch("/api/properties?pageSize=1"),
+            fetch("/api/permits?pageSize=5"),
+            fetch("/api/tasks?status=PENDING&pageSize=1"),
+          ]);
 
         if (userRes.ok) {
           const userJson = await userRes.json();
@@ -111,6 +114,11 @@ export default function DashboardPage() {
             (p: PermitSummary) => p.status === "INSPECTION_SCHEDULED"
           ).length;
           setPendingInspections(pending);
+        }
+
+        if (tasksRes.ok) {
+          const tasksJson = await tasksRes.json();
+          setTasksDue(tasksJson.data?.pagination?.total ?? 0);
         }
       } catch {
         // Silently handle - stats will show 0
@@ -145,7 +153,7 @@ export default function DashboardPage() {
     },
     {
       label: "Tasks Due",
-      value: "0",
+      value: tasksDue.toString(),
       icon: CheckSquare,
       color: "text-danger",
       bgColor: "bg-red-50",

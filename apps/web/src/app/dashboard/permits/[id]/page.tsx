@@ -331,6 +331,7 @@ export default function PermitDetailPage() {
   const [inspectionsLoading, setInspectionsLoading] = useState(false);
   const [activities, setActivities] = useState<ActivityItem[]>([]);
   const [activitiesLoading, setActivitiesLoading] = useState(false);
+  const [fetchedTabs, setFetchedTabs] = useState<Set<string>>(new Set());
 
   // Messages state
   const [messages, setMessages] = useState<MessageItem[]>([]);
@@ -402,71 +403,80 @@ export default function PermitDetailPage() {
     }
   }, [messages, activeTab]);
 
+  // ---- Helper to refresh tab data (called after adding items) ----
+  const refreshTabData = useCallback(
+    (tab: string) => {
+      if (!permitId) return;
+      const fetchers: Record<string, () => void> = {
+        timeline: () => {
+          setTimelineLoading(true);
+          fetch(`/api/permits/${permitId}/timeline`)
+            .then((r) => r.json())
+            .then((json) => setTimeline(json.data ?? []))
+            .catch(() => {})
+            .finally(() => setTimelineLoading(false));
+        },
+        documents: () => {
+          setDocumentsLoading(true);
+          fetch(`/api/permits/${permitId}/documents`)
+            .then((r) => r.json())
+            .then((json) => setDocuments(json.data ?? []))
+            .catch(() => {})
+            .finally(() => setDocumentsLoading(false));
+        },
+        photos: () => {
+          setPhotosLoading(true);
+          fetch(`/api/permits/${permitId}/photos`)
+            .then((r) => r.json())
+            .then((json) => setPhotos(json.data ?? []))
+            .catch(() => {})
+            .finally(() => setPhotosLoading(false));
+        },
+        inspections: () => {
+          setInspectionsLoading(true);
+          fetch(`/api/permits/${permitId}/inspections`)
+            .then((r) => r.json())
+            .then((json) => setInspections(json.data ?? []))
+            .catch(() => {})
+            .finally(() => setInspectionsLoading(false));
+        },
+        activity: () => {
+          setActivitiesLoading(true);
+          fetch(`/api/permits/${permitId}/activity`)
+            .then((r) => r.json())
+            .then((json) => setActivities(json.data?.activities ?? []))
+            .catch(() => {})
+            .finally(() => setActivitiesLoading(false));
+        },
+        messages: () => {
+          setMessagesLoading(true);
+          fetch(`/api/permits/${permitId}/messages`)
+            .then((r) => r.json())
+            .then((json) => setMessages(json.data ?? []))
+            .catch(() => {})
+            .finally(() => setMessagesLoading(false));
+        },
+        parties: () => {
+          setPartiesLoading(true);
+          fetch(`/api/permits/${permitId}/parties`)
+            .then((r) => r.json())
+            .then((json) => setParties(json.data ?? []))
+            .catch(() => {})
+            .finally(() => setPartiesLoading(false));
+        },
+      };
+      fetchers[tab]?.();
+      setFetchedTabs((prev) => new Set(prev).add(tab));
+    },
+    [permitId]
+  );
+
   // ---- Fetch tab data on tab change ----
   useEffect(() => {
-    if (!permit) return;
+    if (!permit || !permitId) return;
 
-    if (activeTab === "timeline" && timeline.length === 0 && !timelineLoading) {
-      setTimelineLoading(true);
-      fetch(`/api/permits/${permitId}/timeline`)
-        .then((r) => r.json())
-        .then((json) => setTimeline(json.data ?? []))
-        .catch(() => {})
-        .finally(() => setTimelineLoading(false));
-    }
-
-    if (activeTab === "documents" && documents.length === 0 && !documentsLoading) {
-      setDocumentsLoading(true);
-      fetch(`/api/permits/${permitId}/documents`)
-        .then((r) => r.json())
-        .then((json) => setDocuments(json.data ?? []))
-        .catch(() => {})
-        .finally(() => setDocumentsLoading(false));
-    }
-
-    if (activeTab === "photos" && photos.length === 0 && !photosLoading) {
-      setPhotosLoading(true);
-      fetch(`/api/permits/${permitId}/photos`)
-        .then((r) => r.json())
-        .then((json) => setPhotos(json.data ?? []))
-        .catch(() => {})
-        .finally(() => setPhotosLoading(false));
-    }
-
-    if (activeTab === "inspections" && inspections.length === 0 && !inspectionsLoading) {
-      setInspectionsLoading(true);
-      fetch(`/api/permits/${permitId}/inspections`)
-        .then((r) => r.json())
-        .then((json) => setInspections(json.data ?? []))
-        .catch(() => {})
-        .finally(() => setInspectionsLoading(false));
-    }
-
-    if (activeTab === "activity" && activities.length === 0 && !activitiesLoading) {
-      setActivitiesLoading(true);
-      fetch(`/api/permits/${permitId}/activity`)
-        .then((r) => r.json())
-        .then((json) => setActivities(json.data?.activities ?? []))
-        .catch(() => {})
-        .finally(() => setActivitiesLoading(false));
-    }
-
-    if (activeTab === "messages" && messages.length === 0 && !messagesLoading) {
-      setMessagesLoading(true);
-      fetch(`/api/permits/${permitId}/messages`)
-        .then((r) => r.json())
-        .then((json) => setMessages(json.data ?? []))
-        .catch(() => {})
-        .finally(() => setMessagesLoading(false));
-    }
-
-    if (activeTab === "parties" && parties.length === 0 && !partiesLoading) {
-      setPartiesLoading(true);
-      fetch(`/api/permits/${permitId}/parties`)
-        .then((r) => r.json())
-        .then((json) => setParties(json.data ?? []))
-        .catch(() => {})
-        .finally(() => setPartiesLoading(false));
+    if (activeTab !== "overview" && !fetchedTabs.has(activeTab)) {
+      refreshTabData(activeTab);
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [activeTab, permit, permitId]);

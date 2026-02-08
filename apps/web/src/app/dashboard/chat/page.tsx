@@ -200,17 +200,17 @@ export default function ChatPage() {
   const isPropertyChat = !!activeConvo?.context?.propertyId;
 
   const generalSuggestions = [
-    "How do I apply for a building permit?",
+    "How do I apply for a building permit in NJ?",
     "What subcodes do I need for a kitchen renovation?",
-    "How do I schedule an inspection?",
-    "What documents do I need for a permit?",
+    "What's the inspection process for a new build?",
+    "What documents do I need for a permit application?",
   ];
 
   const propertySuggestions = [
-    "What permits do I have?",
-    "What's the status of my permits?",
+    "What needs to be done and by who?",
+    "Summarize all my pending permits and their status",
+    "The city gave me corrections — what do I do next?",
     "What inspections are coming up?",
-    "What do I need to do next?",
   ];
 
   return (
@@ -339,16 +339,33 @@ export default function ChatPage() {
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
             </svg>
           </button>
-          <div>
+          <div className="flex-1">
             <h2 className="text-sm font-semibold text-neutral-900">
               {activeConvo?.title || "AI Chat Assistant"}
             </h2>
-            {isPropertyChat && (
-              <span className="text-xs text-primary-600">
-                Property-specific context
+            {isPropertyChat ? (
+              <span className="inline-flex items-center gap-1 text-xs text-primary-600">
+                <span className="h-1.5 w-1.5 rounded-full bg-primary-500" />
+                Property-aware — knows your permits, tasks & team
               </span>
-            )}
+            ) : activeConvoId ? (
+              <span className="inline-flex items-center gap-1 text-xs text-neutral-400">
+                <span className="h-1.5 w-1.5 rounded-full bg-neutral-300" />
+                General permits Q&A
+              </span>
+            ) : null}
           </div>
+          {activeConvoId && (
+            <span
+              className={`rounded-full px-2.5 py-0.5 text-[10px] font-semibold uppercase tracking-wider ${
+                isPropertyChat
+                  ? "bg-primary-50 text-primary-700"
+                  : "bg-neutral-100 text-neutral-500"
+              }`}
+            >
+              {isPropertyChat ? "Property Bot" : "General Bot"}
+            </span>
+          )}
         </div>
 
         {/* Messages */}

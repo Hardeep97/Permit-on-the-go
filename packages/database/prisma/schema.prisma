@@ -18,10 +18,13 @@ model User {
   password           String?
   name               String
   phone              String?
+  company            String?
   avatarUrl          String?
   stripeCustomerId   String?
   emailVerified      Boolean   @default(false)
   onboardingComplete Boolean   @default(false)
+  resetToken         String?
+  resetTokenExpiry   DateTime?
   createdAt          DateTime  @default(now())
   updatedAt          DateTime  @updatedAt
 
